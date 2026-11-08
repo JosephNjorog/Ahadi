@@ -1,0 +1,47 @@
+{
+  "name": "ahadi",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Ahadi — the promise layer for paying for human and AI work, built on PayPal.",
+  "license": "MIT",
+  "packageManager": "npm@10.9.0",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev --parallel --filter=@ahadi/web --filter=@ahadi/worker",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "db:generate": "npm run generate --workspace=@ahadi/db",
+    "db:migrate": "npm run migrate --workspace=@ahadi/db",
+    "db:seed": "npm run seed --workspace=@ahadi/db",
+    "db:studio": "npm run studio --workspace=@ahadi/db",
+    "demo:reset": "npm run reset --workspace=@ahadi/db",
+    "paypal:check": "tsx scripts/paypal-check.ts",
+    "paypal:webhook": "tsx scripts/paypal-webhook.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "@types/node": "^22.15.0",
+    "dotenv": "^16.6.1",
+    "eslint": "^9.39.0",
+    "globals": "^16.5.0",
+    "prettier": "^3.6.2",
+    "tsx": "^4.20.6",
+    "turbo": "^2.5.8",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.46.0",
+    "vitest": "^3.2.4"
+  }
+}
