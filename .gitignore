@@ -1,0 +1,27 @@
+# dependencies
+node_modules/
+
+# builds
+.next/
+dist/
+out/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+
+# env — never commit real secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# logs / os
+*.log
+npm-debug.log*
+.DS_Store
+coverage/
+
+# local artifact storage
+.data/
+playwright-report/
+test-results/
