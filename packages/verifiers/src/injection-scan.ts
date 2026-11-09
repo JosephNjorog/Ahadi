@@ -9,7 +9,15 @@ import type { ScanTarget } from "./types";
 
 export interface Finding {
   id: string;
-  kind: "hidden_text" | "comment" | "metadata" | "alt_text" | "attribute" | "invisible_chars" | "code_comment" | "instruction";
+  kind:
+    | "hidden_text"
+    | "comment"
+    | "metadata"
+    | "alt_text"
+    | "attribute"
+    | "invisible_chars"
+    | "code_comment"
+    | "instruction";
   location: string;
   text: string;
   hidden: boolean;
@@ -18,11 +26,26 @@ export interface Finding {
 }
 
 const PATTERNS: [string, RegExp][] = [
-  ["addresses_ai", /\b(ai|a\.i\.|llm|gpt|claude|assistant|chatbot|language model|grader|verifier|reviewer|evaluator)\b/i],
-  ["override", /\b(ignore|disregard|forget|override)\b.{0,40}\b(previous|prior|above|all|earlier|instructions?|rules?|criteria)\b/i],
-  ["approve", /\b(approve|approved|mark(ed)? as (passed|complete|met)|full payment|release (the )?(payment|funds)|100\s?%|all criteria (are )?(met|satisfied|pass))\b/i],
-  ["fake_system", /(<\/?\s*(system|assistant|instructions?)\s*>|\[(system|inst)\]|###\s*system|system prompt|developer message)/i],
-  ["already_verified", /\b(already (been )?(verified|approved|checked)|pre-?approved|verification (is )?complete)\b/i],
+  [
+    "addresses_ai",
+    /\b(ai|a\.i\.|llm|gpt|claude|assistant|chatbot|language model|grader|verifier|reviewer|evaluator)\b/i,
+  ],
+  [
+    "override",
+    /\b(ignore|disregard|forget|override)\b.{0,40}\b(previous|prior|above|all|earlier|instructions?|rules?|criteria)\b/i,
+  ],
+  [
+    "approve",
+    /\b(approve|approved|mark(ed)? as (passed|complete|met)|full payment|release (the )?(payment|funds)|100\s?%|all criteria (are )?(met|satisfied|pass))\b/i,
+  ],
+  [
+    "fake_system",
+    /(<\/?\s*(system|assistant|instructions?)\s*>|\[(system|inst)\]|###\s*system|system prompt|developer message)/i,
+  ],
+  [
+    "already_verified",
+    /\b(already (been )?(verified|approved|checked)|pre-?approved|verification (is )?complete)\b/i,
+  ],
   ["score", /\b(score|grade|rating)\b.{0,20}\b(10\/10|100|perfect|maximum)\b/i],
 ];
 
@@ -57,18 +80,26 @@ const HIDDEN_STYLE = [
   [/font-size\s*:\s*0(px|em|rem|%)?\s*(;|$)/i, "font-size:0"],
   [/opacity\s*:\s*0(\.0+)?\s*(;|$)/i, "opacity:0"],
   [/(left|top|text-indent)\s*:\s*-\d{3,}px/i, "off-screen"],
-  [/(width|height)\s*:\s*[01]px.*overflow\s*:\s*hidden|overflow\s*:\s*hidden.*(width|height)\s*:\s*[01]px/i, "clipped 1px"],
+  [
+    /(width|height)\s*:\s*[01]px.*overflow\s*:\s*hidden|overflow\s*:\s*hidden.*(width|height)\s*:\s*[01]px/i,
+    "clipped 1px",
+  ],
   [/clip\s*:\s*rect\(\s*0/i, "clip:rect(0)"],
 ] as const;
 
 function hiddenReason(el: HTMLElement): string | null {
-  if (el.hasAttribute("hidden") || el.getAttribute("aria-hidden") === "true" && !el.text.trim()) return "hidden attribute";
+  if (el.hasAttribute("hidden") || (el.getAttribute("aria-hidden") === "true" && !el.text.trim()))
+    return "hidden attribute";
   const style = el.getAttribute("style") ?? "";
   for (const [re, label] of HIDDEN_STYLE) if (re.test(style)) return label;
   const color = /(^|;)\s*color\s*:\s*([^;]+)/i.exec(style)?.[2]?.trim().toLowerCase();
   const bg = /background(-color)?\s*:\s*([^;]+)/i.exec(style)?.[2]?.trim().toLowerCase();
   if (color && bg && color === bg) return "same color as background";
-  if (color && ["white", "#fff", "#ffffff", "transparent", "rgba(0,0,0,0)"].includes(color.replace(/\s/g, ""))) return `text color ${color}`;
+  if (
+    color &&
+    ["white", "#fff", "#ffffff", "transparent", "rgba(0,0,0,0)"].includes(color.replace(/\s/g, ""))
+  )
+    return `text color ${color}`;
   return null;
 }
 
@@ -91,35 +122,60 @@ export function scanHtml(html: string, location: string, startIndex = 0): Findin
     const text = f.text.replace(/\s+/g, " ").trim();
     if (!text) return;
     const patterns = f.patterns ?? matchPatterns(text);
-    findings.push({ ...f, text: text.slice(0, 2000), patterns, id: `f${++n}`, severity: severity(f.hidden, patterns) });
+    findings.push({
+      ...f,
+      text: text.slice(0, 2000),
+      patterns,
+      id: `f${++n}`,
+      severity: severity(f.hidden, patterns),
+    });
   };
 
-  for (const m of html.matchAll(/<!--([\s\S]*?)-->/g)) push({ kind: "comment", location: `${location} <!-- -->`, text: m[1]!, hidden: true });
+  for (const m of html.matchAll(/<!--([\s\S]*?)-->/g))
+    push({ kind: "comment", location: `${location} <!-- -->`, text: m[1]!, hidden: true });
 
-  const root = parse(html, { comment: false, blockTextElements: { script: false, style: true, noscript: true } });
+  const root = parse(html, {
+    comment: false,
+    blockTextElements: { script: false, style: true, noscript: true },
+  });
   const classes = hiddenClasses(root);
 
   const visit = (el: HTMLElement, path: string, ancestorHidden: string | null) => {
     const tag = el.rawTagName?.toLowerCase() ?? "";
     if (tag === "style") return;
-    const cls = (el.getAttribute?.("class") ?? "").split(/\s+/).find((c) => classes.has(c));
-    const reason = ancestorHidden ?? (el.getAttribute ? hiddenReason(el) : null) ?? (cls ? `.${cls} hidden by CSS` : null);
+    const cls = (el.getAttribute("class") ?? "").split(/\s+/).find((c) => classes.has(c));
+    const reason = ancestorHidden ?? hiddenReason(el) ?? (cls ? `.${cls} hidden by CSS` : null);
     const here = tag ? `${path} > ${tag}${el.id ? `#${el.id}` : ""}` : path;
     if (reason && !ancestorHidden && el.text?.trim()) {
       push({ kind: "hidden_text", location: `${location} ${here} (${reason})`, text: el.text, hidden: true });
     }
-    if (el.getAttribute) {
+    {
       for (const attr of ["alt", "title", "aria-label", "data-ai", "data-instructions", "placeholder"]) {
         const v = el.getAttribute(attr);
-        if (v && matchPatterns(v).length) push({ kind: attr === "alt" ? "alt_text" : "attribute", location: `${location} ${here}[${attr}]`, text: v, hidden: attr !== "placeholder" });
+        if (v && matchPatterns(v).length)
+          push({
+            kind: attr === "alt" ? "alt_text" : "attribute",
+            location: `${location} ${here}[${attr}]`,
+            text: v,
+            hidden: attr !== "placeholder",
+          });
       }
       if (tag === "meta") {
         const content = el.getAttribute("content");
-        if (content) push({ kind: "metadata", location: `${location} meta[${el.getAttribute("name") ?? el.getAttribute("property") ?? "?"}]`, text: content, hidden: true });
+        if (content)
+          push({
+            kind: "metadata",
+            location: `${location} meta[${el.getAttribute("name") ?? el.getAttribute("property") ?? "?"}]`,
+            text: content,
+            hidden: true,
+          });
       }
-      if (tag === "noscript" && el.text.trim()) push({ kind: "hidden_text", location: `${location} ${here}`, text: el.text, hidden: true });
+      if (tag === "noscript" && el.text.trim())
+        push({ kind: "hidden_text", location: `${location} ${here}`, text: el.text, hidden: true });
     }
-    for (const child of el.childNodes) if ((child as HTMLElement).childNodes !== undefined && (child as HTMLElement).rawTagName) visit(child as HTMLElement, here, reason);
+    for (const child of el.childNodes)
+      if ((child as HTMLElement).childNodes !== undefined && (child as HTMLElement).rawTagName)
+        visit(child as HTMLElement, here, reason);
   };
   visit(root, "", null);
 
@@ -127,7 +183,14 @@ export function scanHtml(html: string, location: string, startIndex = 0): Findin
   const visible = root.querySelector("body")?.text ?? root.text;
   for (const sentence of visible.split(/(?<=[.!?])\s+|\n+/)) {
     const pats = matchPatterns(sentence);
-    if (pats.includes("addresses_ai") && pats.length > 1) push({ kind: "instruction", location: `${location} visible text`, text: sentence, hidden: false, patterns: pats });
+    if (pats.includes("addresses_ai") && pats.length > 1)
+      push({
+        kind: "instruction",
+        location: `${location} visible text`,
+        text: sentence,
+        hidden: false,
+        patterns: pats,
+      });
   }
 
   findings.push(...scanInvisibleChars(html, location, n + findings.length));
@@ -142,12 +205,28 @@ export function scanInvisibleChars(text: string, location: string, startIndex = 
   if (tags.length) {
     const decoded = decodeTagChars(tags.join(""));
     const patterns = matchPatterns(decoded);
-    out.push({ id: `f${startIndex + out.length + 1}`, kind: "invisible_chars", location: `${location} (Unicode tag characters)`, text: decoded.slice(0, 2000), hidden: true, patterns, severity: severity(true, patterns) });
+    out.push({
+      id: `f${startIndex + out.length + 1}`,
+      kind: "invisible_chars",
+      location: `${location} (Unicode tag characters)`,
+      text: decoded.slice(0, 2000),
+      hidden: true,
+      patterns,
+      severity: severity(true, patterns),
+    });
   }
   if (zw >= 8 || bidi > 0) {
     // Zero-width sequences can encode bits; show the context around the densest run.
-    const idx = text.search(ZERO_WIDTH.source ? new RegExp(`[\\u200B-\\u200F\\u2060-\\u2064\\uFEFF]{4,}`) : /$^/);
-    const context = idx >= 0 ? text.slice(Math.max(0, idx - 120), idx + 200).replace(ZERO_WIDTH, "⟨ZW⟩").replace(BIDI, "⟨BIDI⟩") : "";
+    const idx = text.search(
+      ZERO_WIDTH.source ? new RegExp(`[\\u200B-\\u200F\\u2060-\\u2064\\uFEFF]{4,}`) : /$^/,
+    );
+    const context =
+      idx >= 0
+        ? text
+            .slice(Math.max(0, idx - 120), idx + 200)
+            .replace(ZERO_WIDTH, "⟨ZW⟩")
+            .replace(BIDI, "⟨BIDI⟩")
+        : "";
     out.push({
       id: `f${startIndex + out.length + 1}`,
       kind: "invisible_chars",
@@ -167,11 +246,28 @@ export function scanText(text: string, location: string, startIndex = 0): Findin
   let n = startIndex;
   for (const m of text.matchAll(/<!--([\s\S]*?)-->/g)) {
     const patterns = matchPatterns(m[1]!);
-    findings.push({ id: `f${++n}`, kind: "comment", location: `${location} <!-- -->`, text: m[1]!.trim().slice(0, 2000), hidden: true, patterns, severity: severity(true, patterns) });
+    findings.push({
+      id: `f${++n}`,
+      kind: "comment",
+      location: `${location} <!-- -->`,
+      text: m[1]!.trim().slice(0, 2000),
+      hidden: true,
+      patterns,
+      severity: severity(true, patterns),
+    });
   }
   for (const sentence of text.split(/(?<=[.!?])\s+|\n+/)) {
     const patterns = matchPatterns(sentence);
-    if (patterns.includes("addresses_ai") && patterns.length > 1) findings.push({ id: `f${++n}`, kind: "instruction", location: `${location} text`, text: sentence.trim().slice(0, 2000), hidden: false, patterns, severity: severity(false, patterns) });
+    if (patterns.includes("addresses_ai") && patterns.length > 1)
+      findings.push({
+        id: `f${++n}`,
+        kind: "instruction",
+        location: `${location} text`,
+        text: sentence.trim().slice(0, 2000),
+        hidden: false,
+        patterns,
+        severity: severity(false, patterns),
+      });
   }
   findings.push(...scanInvisibleChars(text, location, n));
   return dedupe(findings);
@@ -181,24 +277,51 @@ export function scanText(text: string, location: string, startIndex = 0): Findin
 export function scanCode(source: string, location: string, startIndex = 0): Finding[] {
   const findings: Finding[] = [];
   let n = startIndex;
-  const comments = [...source.matchAll(/\/\/[^\n]*|\/\*[\s\S]*?\*\/|#[^\n]*|"""[\s\S]*?"""/g)].map((m) => m[0]);
+  const comments = [...source.matchAll(/\/\/[^\n]*|\/\*[\s\S]*?\*\/|#[^\n]*|"""[\s\S]*?"""/g)].map(
+    (m) => m[0],
+  );
   for (const c of comments) {
     const patterns = matchPatterns(c);
-    if (patterns.includes("addresses_ai") && patterns.length > 1) findings.push({ id: `f${++n}`, kind: "code_comment", location, text: c.slice(0, 2000), hidden: false, patterns, severity: severity(false, patterns) });
+    if (patterns.includes("addresses_ai") && patterns.length > 1)
+      findings.push({
+        id: `f${++n}`,
+        kind: "code_comment",
+        location,
+        text: c.slice(0, 2000),
+        hidden: false,
+        patterns,
+        severity: severity(false, patterns),
+      });
   }
   findings.push(...scanInvisibleChars(source, location, n));
   return findings;
 }
 
-export function scanTargets(targets: ScanTarget[], rendered: { text: string; location: string; reason: string }[] = []): Finding[] {
+export function scanTargets(
+  targets: ScanTarget[],
+  rendered: { text: string; location: string; reason: string }[] = [],
+): Finding[] {
   const out: Finding[] = [];
   for (const t of targets) {
-    const f = t.format === "html" ? scanHtml(t.content, t.location, out.length) : t.format === "code" ? scanCode(t.content, t.location, out.length) : scanText(t.content, t.location, out.length);
+    const f =
+      t.format === "html"
+        ? scanHtml(t.content, t.location, out.length)
+        : t.format === "code"
+          ? scanCode(t.content, t.location, out.length)
+          : scanText(t.content, t.location, out.length);
     out.push(...f);
   }
   for (const r of rendered) {
     const patterns = matchPatterns(r.text);
-    out.push({ id: `f${out.length + 1}`, kind: "hidden_text", location: `${r.location} (${r.reason}, rendered)`, text: r.text.slice(0, 2000), hidden: true, patterns, severity: severity(true, patterns) });
+    out.push({
+      id: `f${out.length + 1}`,
+      kind: "hidden_text",
+      location: `${r.location} (${r.reason}, rendered)`,
+      text: r.text.slice(0, 2000),
+      hidden: true,
+      patterns,
+      severity: severity(true, patterns),
+    });
   }
   return dedupe(out).map((f, i) => ({ ...f, id: `f${i + 1}` }));
 }
@@ -209,7 +332,8 @@ export function stripFindings(content: string, findings: Finding[]): string {
   for (const f of findings) {
     if (f.severity === "low") continue;
     const needle = f.text.slice(0, 200);
-    if (needle.length >= 12) out = out.split(needle).join("[removed by Ahadi: suspected instruction to the verifier]");
+    if (needle.length >= 12)
+      out = out.split(needle).join("[removed by Ahadi: suspected instruction to the verifier]");
   }
   return out;
 }
