@@ -122,7 +122,7 @@ export function TermsPanel(p: TermsPanelProps) {
           tone="danger"
           title="The contract builder couldn't finish"
           action={
-            editable && p.termsError && !p.termsError.includes("ANTHROPIC_API_KEY") ? (
+            editable && p.termsError && !p.termsError.includes("AI provider key") ? (
               <Button
                 size="sm"
                 variant="secondary"
