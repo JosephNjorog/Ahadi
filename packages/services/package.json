@@ -1,0 +1,25 @@
+{
+  "name": "@ahadi/services",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "seed": "tsx src/seed.ts",
+    "reset": "tsx src/seed.ts --reset"
+  },
+  "dependencies": {
+    "@ahadi/core": "*",
+    "@ahadi/db": "*",
+    "@ahadi/ledger": "*",
+    "@ahadi/paypal": "*",
+    "@ahadi/queue": "*",
+    "dotenv": "^16.6.1",
+    "drizzle-orm": "^0.44.7",
+    "pino": "^10.1.0",
+    "zod": "^4.1.12"
+  }
+}
