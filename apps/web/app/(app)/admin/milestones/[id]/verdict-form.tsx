@@ -139,11 +139,11 @@ export function VerdictForm({
                         "h-9 rounded-lg border px-3 text-sm font-medium capitalize",
                         s.outcome === o
                           ? o === "pass"
-                            ? "border-brand-600 bg-brand-50 text-brand-700"
+                            ? "border-ink bg-raised text-ink"
                             : o === "fail"
                               ? "border-danger-600 bg-danger-50 text-danger-600"
                               : "border-warn-600 bg-warn-50 text-warn-600"
-                          : "border-line text-ink-muted hover:bg-canvas",
+                          : "border-line text-ink-muted hover:bg-raised",
                       )}
                     >
                       {o}
@@ -164,7 +164,7 @@ export function VerdictForm({
                   ) : null}
                 </div>
                 <input
-                  className="mt-3 h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm outline-none focus:border-brand-500"
+                  className="mt-3 h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm outline-none focus:border-ink"
                   placeholder="Reasoning (optional) — shown to both parties"
                   value={s.reasoning}
                   maxLength={500}
@@ -216,7 +216,7 @@ export function VerdictForm({
           <label className="block">
             <span className="text-sm font-medium">Note for the ledger</span>
             <textarea
-              className="mt-1 min-h-20 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-brand-500"
+              className="mt-1 min-h-20 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-ink"
               value={note}
               maxLength={1000}
               onChange={(e) => {
