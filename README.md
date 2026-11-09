@@ -13,6 +13,7 @@ Ahadi (Swahili for *promise*) is a trust layer for paying for work — done by h
 | 🛠 Setup guide (Neon + PayPal) | [docs/SETUP.md](docs/SETUP.md) |
 | 📐 Technical spec | [docs/SPEC.md](docs/SPEC.md) |
 | 🧠 Agent prompts | [docs/AGENT_PROMPTS.md](docs/AGENT_PROMPTS.md) |
+| 🤖 MCP guide | [docs/MCP.md](docs/MCP.md) |
 | 📄 License | [MIT](LICENSE) |
 
 ---
@@ -241,7 +242,7 @@ npm run paypal:check          # verifies PayPal, Payouts, webhook, DB and Redis
 ### Run
 
 ```bash
-npm run dev                   # web (3000) + worker
+npm run dev                   # web (3000) + worker; MCP at http://localhost:3000/mcp
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
@@ -360,8 +361,8 @@ Tools exposed: `search_providers`, `create_promise`, `fund_promise`, `get_promis
 ahadi/
 ├── apps/
 │   ├── web/                  # Next.js app: UI + API routes + webhooks
-│   ├── worker/               # BullMQ worker: settlement, payouts, webhooks, monitors
-│   └── mcp/                  # Ahadi MCP server                        (Phase 5)
+│   ├── worker/               # BullMQ worker: every job in SPEC §17
+│   └── mcp/                  # Ahadi MCP server (also served by web at /mcp)
 ├── packages/
 │   ├── core/                 # Pure domain: state machines, settlement engine, money, criteria, env
 │   ├── db/                   # Drizzle schema + migrations, Neon-aware pool
@@ -369,10 +370,10 @@ ahadi/
 │   ├── paypal/               # Typed PayPal REST client + webhook verification
 │   ├── queue/                # BullMQ job definitions shared by web and worker
 │   ├── services/             # Domain services (funding, settlement, payouts, webhooks, auth, seed)
-│   ├── agents/               # Prompts, schemas, agent runners            (Phase 2)
-│   └── verifiers/            # Web, code, design, writing, data collectors (Phase 3)
+│   ├── agents/               # Prompts, schemas, structured-output runner, agent tasks
+│   └── verifiers/            # Web, code, design, writing, data collectors + injection scanner
 ├── scripts/                  # paypal:check, paypal:webhook
-├── fixtures/                 # Demo deliverables                         (Phase 3)
+├── fixtures/                 # Demo deliverables (bakery v1/v2/injection, research report)
 ├── docs/
 │   ├── SETUP.md
 │   ├── SPEC.md
@@ -400,11 +401,11 @@ ahadi/
 Built in the phases of [SPEC §25](docs/SPEC.md#25-build-order).
 
 - [x] **Phase 1 — Money spine:** monorepo, full schema on Neon, typed PayPal client, fund page (authorize), webhooks, partial `final_capture`, void, Payouts with splits, reconciliation, authorization monitor, hash-chained ledger, admin manual verdict, CI
-- [ ] **Phase 2 — Promise engine:** Contract Architect + Critic, terms editor, signing
-- [ ] **Phase 3 — Verification:** web collector, Injection Sentinel, live verification UI, objection window
-- [ ] **Phase 4 — Trust layer:** more verifiers, Mediator, evidence-pack PDF, Passport
-- [ ] **Phase 5 — Agent economy:** MCP server, mandates, Kazi Research Agent
-- [ ] **Phase 6 — Reach and polish:** WhatsApp, voice briefs, AG Grid admin, Ops Agent
+- [x] **Phase 2 — Promise engine:** Contract Architect + Critic, terms editor (Apply suggestion, revisions, versions), hashed signing
+- [x] **Phase 3 — Verification:** web collector (Playwright), injection scanner + Sentinel, machine checks, verifier agents with re-runs and Reviewer, live SSE verification, objection window and decisions
+- [x] **Phase 4 — Trust layer:** code (GitHub + E2B/Docker), writing/research, design and data verifiers; Mediator; Risk Analyst; evidence-pack PDF; Passport and Ed25519-signed statements
+- [x] **Phase 5 — Agent economy:** MCP server (`/mcp`), agent keys, spending mandates, marketplace, signed provider webhooks, Kazi Research Agent
+- [x] **Phase 6 — Reach and polish:** WhatsApp concierge, voice briefs, notifications, AG Grid admin ledger, Ops Agent, Render deployment
 
 ## Roadmap (beyond the hackathon)
 
