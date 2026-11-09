@@ -1,0 +1,30 @@
+name: Deploy
+
+# Production deploys happen only from main, after CI passes on the merge commit.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Trigger Render deploys
+        env:
+          WEB_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_WEB }}
+          WORKER_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_WORKER }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          if [ -z "$WEB_HOOK" ] || [ -z "$WORKER_HOOK" ]; then
+            echo "::error::Set RENDER_DEPLOY_HOOK_WEB and RENDER_DEPLOY_HOOK_WORKER repository secrets (Render → service → Settings → Deploy Hook)."
+            exit 1
+          fi
+          curl -fsS -X POST "$WEB_HOOK&ref=$SHA"
+          curl -fsS -X POST "$WORKER_HOOK&ref=$SHA"
