@@ -1,0 +1,23 @@
+{
+  "name": "@ahadi/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/server.ts"
+  },
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=../../.env src/standalone.ts",
+    "start": "tsx src/standalone.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@ahadi/core": "*",
+    "@ahadi/db": "*",
+    "@ahadi/services": "*",
+    "@modelcontextprotocol/sdk": "^1.32.0",
+    "drizzle-orm": "^0.44.7",
+    "tsx": "^4.20.6",
+    "zod": "^4.1.12"
+  }
+}
