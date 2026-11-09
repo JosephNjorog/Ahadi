@@ -49,7 +49,7 @@ const PATTERNS: [string, RegExp][] = [
   ["score", /\b(score|grade|rating)\b.{0,20}\b(10\/10|100|perfect|maximum)\b/i],
 ];
 
-const ZERO_WIDTH = /[​-‏⁠-⁤﻿­]/g;
+const ZERO_WIDTH = /[\u200B-\u200F\u2060-\u2064\uFEFF\u00AD]/g;
 const BIDI = /[‪-‮⁦-⁩]/g;
 const TAG_CHARS = /[\u{E0000}-\u{E007F}]/gu;
 
@@ -329,11 +329,24 @@ export function scanTargets(
 /** Strip-and-compare (SPEC §10.2 step 5): remove flagged passages before verification. */
 export function stripFindings(content: string, findings: Finding[]): string {
   let out = content.replace(TAG_CHARS, "").replace(ZERO_WIDTH, "").replace(BIDI, "");
-  for (const f of findings) {
+  // Highest severity, then longest, first, so an overlapping finding can't break a longer match.
+  const rank = { high: 0, medium: 1, low: 2 } as const;
+  const ordered = [...findings].sort(
+    (a, b) => rank[a.severity] - rank[b.severity] || b.text.length - a.text.length,
+  );
+  for (const f of ordered) {
     if (f.severity === "low") continue;
-    const needle = f.text.slice(0, 200);
-    if (needle.length >= 12)
-      out = out.split(needle).join("[removed by Ahadi: suspected instruction to the verifier]");
+    // Findings are whitespace-normalised; match the original with any whitespace between words.
+    const words = f.text
+      .replace(TAG_CHARS, "")
+      .replace(ZERO_WIDTH, "")
+      .replace(BIDI, "")
+      .slice(0, 300)
+      .split(/\s+/)
+      .filter(Boolean);
+    if (words.join(" ").length < 12) continue;
+    const pattern = new RegExp(words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\s+"), "g");
+    out = out.replace(pattern, "[removed by Ahadi: suspected instruction to the verifier]");
   }
   return out;
 }
