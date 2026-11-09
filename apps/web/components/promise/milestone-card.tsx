@@ -142,6 +142,39 @@ export function MilestoneCard({
                   : `Fund ${formatMoney(m.amountMinor, currency)} with PayPal`}
               </ButtonLink>
             ) : null}
+            {role === "worker" && m.state === "FUNDED" ? (
+              <ButtonLink href={`/promises/${promiseId}/submit?milestone=${m.id}`} className="mt-3 w-full">
+                {m.attemptsUsed > 0 ? "Resubmit work" : "Submit work"}
+              </ButtonLink>
+            ) : null}
+            {m.latestSubmission ? (
+              <ButtonLink
+                href={`/promises/${promiseId}/verify?milestone=${m.id}`}
+                variant={
+                  ["OBJECTION_WINDOW", "NEEDS_HUMAN", "VERIFYING", "SUBMITTED"].includes(m.state)
+                    ? "primary"
+                    : "secondary"
+                }
+                className="mt-3 w-full"
+              >
+                {m.state === "OBJECTION_WINDOW"
+                  ? "Review the verdict"
+                  : m.state === "NEEDS_HUMAN"
+                    ? "Review needed"
+                    : ["VERIFYING", "SUBMITTED"].includes(m.state)
+                      ? "Watch verification live"
+                      : "Verification report"}
+              </ButtonLink>
+            ) : null}
+            {["MEDIATING", "ESCALATED"].includes(m.state) || m.proposal?.mediationId ? (
+              <ButtonLink
+                href={`/promises/${promiseId}/mediation?milestone=${m.id}`}
+                variant="secondary"
+                className="mt-3 w-full"
+              >
+                Mediation
+              </ButtonLink>
+            ) : null}
             {isAdmin && m.state === "FUNDED" ? (
               <ButtonLink href={`/admin/milestones/${m.id}`} variant="secondary" className="mt-3 w-full">
                 Admin: record manual verdict

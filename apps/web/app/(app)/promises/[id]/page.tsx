@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getEnv } from "@ahadi/core/env";
-import { getPromiseDetail } from "@ahadi/services";
+import { getPromiseDetail, listTermsVersions } from "@ahadi/services";
+import { TermsPanel } from "@/components/promise/terms-panel";
 import { MilestoneCard } from "@/components/promise/milestone-card";
 import { PromiseStatusBadge } from "@/components/promise/status-badge";
 import { Badge, ButtonLink, Card, CardBody, CardHeader } from "@/components/ui";
@@ -19,6 +20,8 @@ export default async function PromisePage({ params }: { params: Promise<{ id: st
   const { promise: p, terms, signatures } = d;
   const total = d.milestones.reduce((s, m) => s + m.amountMinor, 0);
   const signed = (party: "client" | "worker") => signatures.find((s) => s.party === party);
+  const negotiating = p.state === "DRAFT" || p.state === "NEGOTIATING";
+  const versions = negotiating ? await listTermsVersions(p.id) : [];
 
   return (
     <div className="space-y-6">
@@ -43,9 +46,48 @@ export default async function PromisePage({ params }: { params: Promise<{ id: st
             <ButtonLink href={`/promises/${p.id}/ledger`} variant="secondary" size="sm">
               Evidence ledger
             </ButtonLink>
+            <a
+              href={`/api/promises/${p.id}/evidence.pdf`}
+              className="text-sm font-medium text-brand-700 hover:underline"
+            >
+              PDF
+            </a>
           </div>
         </div>
       </div>
+
+      {negotiating || p.state === "CANCELLED" ? (
+        <TermsPanel
+          promiseId={p.id}
+          state={p.state}
+          termsStatus={p.termsStatus}
+          termsError={p.termsError}
+          role={d.role}
+          currency={p.currency}
+          budgetMinor={p.budgetMinor}
+          terms={
+            terms
+              ? {
+                  version: terms.version,
+                  body: terms.body,
+                  bodyHash: terms.bodyHash,
+                  changeSummary: terms.changeSummary,
+                  critique: terms.critique as never,
+                  notes: terms.notes as never,
+                  createdAt: terms.createdAt.toISOString(),
+                }
+              : null
+          }
+          versions={versions.map((v) => ({ ...v, createdAt: v.createdAt.toISOString() }))}
+          signatures={signatures.map((s) => ({
+            party: s.party,
+            bodyHash: s.bodyHash,
+            signedAt: s.signedAt.toISOString(),
+          }))}
+          worker={d.worker ? { displayName: d.worker.displayName, email: d.worker.email } : null}
+          inviteEmail={p.inviteEmail}
+        />
+      ) : null}
 
       <div className="space-y-4">
         {d.milestones.map((m) => (
@@ -124,7 +166,7 @@ export default async function PromisePage({ params }: { params: Promise<{ id: st
                 ) : null}
               </>
             ) : (
-              <p className="text-ink-muted">The contract builder arrives in Phase 2.</p>
+              <p className="text-ink-muted">No terms yet.</p>
             )}
           </CardBody>
         </Card>
