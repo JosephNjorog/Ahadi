@@ -133,7 +133,14 @@ export function MoneyChart({
         </g>
       ))}
       {ticks.map((i) => (
-        <text key={i} x={x(i)} y={H - 8} textAnchor="middle" fontSize="11" fill="var(--color-ink-subtle)">
+        <text
+          key={i}
+          x={x(i)}
+          y={H - 8}
+          textAnchor={i === n - 1 ? "end" : i === 0 ? "start" : "middle"}
+          fontSize="11"
+          fill="var(--color-ink-subtle)"
+        >
           {fmtDay.format(new Date(start.getTime() + i * 86_400_000))}
         </text>
       ))}
