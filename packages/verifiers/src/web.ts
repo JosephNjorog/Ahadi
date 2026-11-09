@@ -1,7 +1,7 @@
 import type { BrowserContext, Page } from "playwright-core";
 import { parse } from "node-html-parser";
 import type { MachineCheck } from "@ahadi/core";
-import { getBrowser } from "./browser";
+import { discardBrowser, getBrowser, settleWithin } from "./browser";
 import { mapLimit, safeFetch } from "./fetch";
 import { emptyResult, type CollectorResult } from "./types";
 
@@ -179,6 +179,9 @@ async function measureScroll(page: Page, deviceWidth: number) {
   };
 }
 
+/** Longest we wait for a page or context to close before moving on. */
+const CLOSE_TIMEOUT_MS = 5_000;
+
 export async function collectWeb(url: string, checks: MachineCheck[]): Promise<CollectorResult> {
   const result = emptyResult();
   const summary: WebSummary = {
@@ -280,7 +283,7 @@ export async function collectWeb(url: string, checks: MachineCheck[]): Promise<C
       if (c.kind !== "form_submits") continue;
       summary.formTests[c.selector] = await testForm(desktop, url, c.selector);
     }
-    await page.close();
+    await settleWithin(page.close(), CLOSE_TIMEOUT_MS);
 
     // Mobile (375×812 + mobile UA)
     const mobile = await newContext(MOBILE, true);
@@ -326,7 +329,10 @@ export async function collectWeb(url: string, checks: MachineCheck[]): Promise<C
           scrollWidth: s.scrollWidth,
         };
       }
-      await mobile.close();
+      if (!(await settleWithin(mobile.close(), CLOSE_TIMEOUT_MS))) {
+        result.warnings.push("Mobile browser context did not close in time; browser restarted.");
+        discardBrowser();
+      }
     }
 
     // Internal link check (HEAD, fall back to GET).
@@ -349,7 +355,10 @@ export async function collectWeb(url: string, checks: MachineCheck[]): Promise<C
       broken: statuses.filter((s) => typeof s.status !== "number" || s.status >= 400),
     };
   } finally {
-    await desktop.close().catch(() => undefined);
+    if (!(await settleWithin(desktop.close(), CLOSE_TIMEOUT_MS))) {
+      result.warnings.push("Browser context did not close in time; browser restarted.");
+      discardBrowser();
+    }
   }
 
   result.artifacts.push({
@@ -415,7 +424,9 @@ async function testForm(
   } catch (e) {
     return { status: null, error: (e as Error).message.split("\n")[0]!.slice(0, 200) };
   } finally {
-    await page.close().catch(() => undefined);
+    // Chromium can stall closing a page that has just navigated to the form's
+    // response; never let teardown block the verification.
+    await settleWithin(page.close(), CLOSE_TIMEOUT_MS);
   }
 }
 
