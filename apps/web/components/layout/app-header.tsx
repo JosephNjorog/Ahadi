@@ -5,11 +5,14 @@ import { Logo } from "./logo";
 import { DemoSwitcher } from "./demo-switcher";
 import { SignOutButton } from "./sign-out-button";
 import { NavLinks } from "./nav-links";
+import { NotificationBell } from "./notification-bell";
 
 export function AppHeader({ user }: { user: User }) {
   const env = getEnv();
   const links = [
     { href: "/dashboard", label: "Promises" },
+    { href: "/marketplace", label: "Marketplace" },
+    { href: "/agents", label: "Agents" },
     { href: "/settings", label: "Settings" },
     ...(user.role === "admin" ? [{ href: "/admin", label: "Admin" }] : []),
   ];
@@ -26,6 +29,7 @@ export function AppHeader({ user }: { user: User }) {
               PayPal sandbox
             </span>
           ) : null}
+          <NotificationBell />
           {env.DEMO_MODE ? <DemoSwitcher currentEmail={user.email} /> : null}
           <Link
             href="/settings"

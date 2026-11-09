@@ -25,7 +25,9 @@
     "@ahadi/worker": "*",
     "@ahadi/mcp": "*",
     "@ahadi/agents": "*",
-    "@ahadi/verifiers": "*"
+    "@ahadi/verifiers": "*",
+    "ag-grid-community": "^34.3.1",
+    "ag-grid-react": "^34.3.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.16",
