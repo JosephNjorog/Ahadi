@@ -11,7 +11,8 @@ Follow it top to bottom the first time; each section ends with a check so you kn
 - [6. Webhooks (public URL)](#6-webhooks-public-url)
 - [7. Test the Phase 1 money flow](#7-test-the-phase-1-money-flow)
 - [8. Deploy to Render](#8-deploy-to-render)
-- [9. Troubleshooting](#9-troubleshooting)
+- [9. AI and optional integrations](#9-ai-and-optional-integrations)
+- [10. Troubleshooting](#10-troubleshooting)
 
 ---
 
@@ -201,18 +202,49 @@ Also worth trying:
 
 ## 8. Deploy to Render
 
-1. Push the repo to GitHub. In Render: **New → Blueprint →** select the repo. Render reads `render.yaml` and creates `ahadi-web`, `ahadi-worker` and `ahadi-kv` (Redis with `noeviction`).
-2. Fill the **ahadi-secrets** environment group. Use the Neon **`main`** branch strings for production:
-   `APP_URL` (your `https://ahadi-web.onrender.com`), `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `NEXT_PUBLIC_PAYPAL_CLIENT_ID`, `DEMO_BUYER_PAYPAL_EMAIL`, `DEMO_WORKER_PAYPAL_EMAIL`. `SESSION_SECRET` is generated for you.
-3. Deploy. `preDeployCommand` runs `npm run db:migrate` before each web deploy. Seed once from your machine against the `main` branch: `DATABASE_URL=<main pooled> npm run db:seed`.
-4. Register the webhook: `npm run paypal:webhook -- https://ahadi-web.onrender.com`. Put the id in `PAYPAL_WEBHOOK_ID` in the env group, then redeploy.
-5. CI/CD: `autoDeploy` is off. `.github/workflows/deploy.yml` triggers both services' deploy hooks after CI passes on `main`. In Render, copy each service's **Settings → Deploy Hook** URL into the GitHub repository secrets `RENDER_DEPLOY_HOOK_WEB` and `RENDER_DEPLOY_HOOK_WORKER`.
+The Render web service already exists: **ahadi-web** → https://ahadi-web.onrender.com (Frankfurt, free plan, service id `srv-dbolqp5g1s2s73fjsv60`). It deploys from `main` automatically **after GitHub CI passes**. On the free plan the queue worker runs inside the web server (`RUN_WORKER_IN_WEB=true`).
 
-**Check:** `https://ahadi-web.onrender.com/api/health` returns 200 with all checks `ok`.
+1. **Redis.** Your account's one free Render Key Value is already used by another project, so use a free **Upstash** Redis:
+   https://console.upstash.com → **Create database** → Region **eu-central-1 (Frankfurt)** → copy the `rediss://default:…@…upstash.io:6379` URL. Set **Eviction: off** (BullMQ needs `noeviction`).
+2. **Environment.** Render dashboard → ahadi-web → **Environment** → add:
+
+   | Key | Value |
+   |---|---|
+   | `DATABASE_URL` | Neon `main` branch, pooled |
+   | `DATABASE_URL_UNPOOLED` | Neon `main` branch, direct |
+   | `REDIS_URL` | Upstash `rediss://…` |
+   | `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` | from section 3.3 |
+   | `NEXT_PUBLIC_PAYPAL_CLIENT_ID` | same as `PAYPAL_CLIENT_ID` |
+   | `DEMO_BUYER_PAYPAL_EMAIL`, `DEMO_WORKER_PAYPAL_EMAIL` | sandbox personal accounts |
+   | `ANTHROPIC_API_KEY` | from https://console.anthropic.com/settings/keys |
+   | `PAYPAL_WEBHOOK_ID` | after step 4 |
+
+   Already set for you: `APP_URL`, `SESSION_SECRET` (generated), `PAYPAL_ENV=sandbox`, `DEMO_MODE=true`, `RUN_WORKER_IN_WEB=true`, `OBJECTION_WINDOW_HOURS=0.05`, `NODE_VERSION=22`.
+3. **Deploy.** Merge `develop` → `main`. Render builds (`npm ci && build && db:migrate`) once CI is green. Seed once from your machine against Neon `main`: `DATABASE_URL=<main pooled> npm run db:seed` (it prints the demo buyer agent's API key once).
+4. **Webhook.** `npm run paypal:webhook -- https://ahadi-web.onrender.com` → put the printed id in `PAYPAL_WEBHOOK_ID` → **Manual Deploy → Deploy latest commit** (or just save; Render restarts).
+
+**Check:** https://ahadi-web.onrender.com/api/health returns 200 with all checks `ok`.
+
+> Free web services sleep after ~15 minutes idle; the first request wakes them (~1 min). PayPal retries webhooks, so nothing is lost, but scheduled jobs (hold monitor, payout reconcile) only run while awake. Upgrade to a paid instance and a separate worker (`render.yaml` explains how) before real use.
 
 ---
 
-## 9. Troubleshooting
+## 9. AI and optional integrations
+
+| Feature | Variables | Where to get them | Without it |
+|---|---|---|---|
+| **AI agents** (Contract Architect, Critic, Sentinel, Verifiers, Reviewer, Mediator, Explainer, Risk Analyst, Concierge, Ops Agent, Kazi) | `ANTHROPIC_API_KEY` (+ optional `MODEL_ARCHITECT`, `MODEL_VERIFIER`, `MODEL_FAST`) | https://console.anthropic.com/settings/keys | Terms are written by hand; AI-judged criteria go to a human reviewer; mediation goes to an admin. Machine checks still run. |
+| **Website screenshots** | `PLAYWRIGHT_CHROMIUM_EXECUTABLE` (Docker), or run `npx playwright-core install chromium-headless-shell` in the build | — | Fetch-only evidence: HTML/text checks run; visual and layout criteria go to a human. |
+| **Code builds/tests** | `SANDBOX_PROVIDER=e2b`, `SANDBOX_API_KEY` | https://e2b.dev/dashboard | Static analysis only; build/test criteria go to a human. |
+| **Private repos** | `GITHUB_TOKEN` (read-only, fine-grained) | https://github.com/settings/personal-access-tokens | Public repos only. |
+| **Email sign-in links** | `RESEND_API_KEY`, `EMAIL_FROM` | https://resend.com/api-keys | Links are logged and shown on screen in development; use the demo accounts. |
+| **Voice briefs** | `STT_PROVIDER=whisper` + `STT_API_KEY` (OpenAI), or `deepgram` | https://platform.openai.com/api-keys · https://console.deepgram.com | Type the brief. |
+| **WhatsApp** | `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET` | Meta for Developers → WhatsApp → API Setup; webhook URL `https://ahadi-web.onrender.com/api/webhooks/whatsapp` | Notifications go by email and in-app only. |
+| **Statement signing key** | `AHADI_SIGNING_KEY` (PKCS#8 PEM): `openssl genpkey -algorithm ed25519` | — | A stable key is derived from `SESSION_SECRET`. |
+
+---
+
+## 10. Troubleshooting
 
 | Symptom | Cause / fix |
 |---|---|
@@ -224,6 +256,9 @@ Also worth trying:
 | Payout `UNCLAIMED` | The receiver email has no sandbox account yet. Create one with that email, or fix the email. |
 | Payout fails with `INSUFFICIENT_FUNDS` | Add balance to the `ahadi-platform` Business sandbox account (Sandbox Accounts → ⋯ → Edit). |
 | Webhook returns 400 | Signature verification failed. Either it came from the simulator, or `PAYPAL_WEBHOOK_ID` belongs to a different app or URL. Re-run `npm run paypal:webhook`. |
-| `/api/health` → `queue: error` | Redis isn't running or `REDIS_URL` is wrong. |
+| `/api/health` → `queue: error` | Redis isn't running or `REDIS_URL` is wrong (Upstash needs the `rediss://` URL). |
+| Terms stay "drafting" | No worker is consuming jobs: set `RUN_WORKER_IN_WEB=true` (free plan) or run the worker service. Check `ANTHROPIC_API_KEY`. |
+| Verification "needs a human" for visual criteria | No Chromium available on the host; see section 9. |
+| MCP returns 401 | The agent key is wrong or revoked; create or rotate it on Agents. |
 | Jobs never run | The worker isn't running (`npm run dev` starts it; on Render check `ahadi-worker` logs). |
 | `relation "promises" does not exist` | Run `npm run db:migrate` against the same branch as `DATABASE_URL`. |
