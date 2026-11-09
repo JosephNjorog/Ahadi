@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { AppError, bpsToPercent, fromPayPalValue, idempotencyKeys, toPayPalValue } from "@ahadi/core";
-import { fundings, getDb, settlements, type Funding, type Settlement } from "@ahadi/db";
+import { fundings, getDb, milestones, promises, settlements, type Funding, type Settlement } from "@ahadi/db";
 import { appendLedgerEvent } from "@ahadi/ledger";
 import {
   PayPalError,
@@ -16,6 +16,7 @@ import { getLiveFunding } from "./funding";
 import { log } from "./log";
 import { getPayPal } from "./paypal";
 import { applyMilestoneEvent } from "./transitions";
+import { afterSettled } from "./payouts";
 
 export type SettlementOutcome = "captured" | "capture_pending" | "voided" | "already_done" | "failed";
 
@@ -238,6 +239,19 @@ export async function recordVoid(
     });
   });
   log.info({ promise_id: promiseId, milestone_id: milestoneId, reason }, "authorization voided");
+  const [m] = await db.select().from(milestones).where(eq(milestones.id, milestoneId));
+  const [p] = await db.select().from(promises).where(eq(promises.id, promiseId));
+  if (m?.state === "VOIDED")
+    await afterSettled(
+      promiseId,
+      milestoneId,
+      p!.workerUserId,
+      p!.clientUserId,
+      0,
+      p!.currency,
+      m.title,
+      p!.workerAgentId,
+    );
 }
 
 async function markFailed(
