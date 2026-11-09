@@ -230,30 +230,26 @@ export async function scoreRisk(promiseId: string, trigger: "created" | "funded"
   for (const s of signals) {
     if (existing.some((e) => e.code === s.code && (e.detail as { detail?: string }).detail === s.detail))
       continue;
-    await db
-      .insert(riskFlags)
-      .values({
-        subjectType: "promise",
-        subjectId: promiseId,
-        code: s.code,
-        severity: s.severity,
-        detail: { detail: s.detail, trigger, assessment: assessment?.summaryForAdmin ?? null },
-      });
+    await db.insert(riskFlags).values({
+      subjectType: "promise",
+      subjectId: promiseId,
+      code: s.code,
+      severity: s.severity,
+      detail: { detail: s.detail, trigger, assessment: assessment?.summaryForAdmin ?? null },
+    });
   }
   if (hold && !existing.some((e) => e.code === "HOLD_PAYOUT")) {
-    await db
-      .insert(riskFlags)
-      .values({
-        subjectType: "promise",
-        subjectId: promiseId,
-        code: "HOLD_PAYOUT",
-        severity: "high",
-        detail: {
-          reasons: signals.filter((s) => s.holdPayout || s.severity === "high").map((s) => s.detail),
-          assessment,
-          trigger,
-        },
-      });
+    await db.insert(riskFlags).values({
+      subjectType: "promise",
+      subjectId: promiseId,
+      code: "HOLD_PAYOUT",
+      severity: "high",
+      detail: {
+        reasons: signals.filter((s) => s.holdPayout || s.severity === "high").map((s) => s.detail),
+        assessment,
+        trigger,
+      },
+    });
     await db.transaction((tx) =>
       appendLedgerEvent(tx, {
         promiseId,

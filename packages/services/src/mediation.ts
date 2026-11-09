@@ -107,7 +107,7 @@ export async function addStatement(actor: Actor, mediationId: string, statement:
 /** mediation.run job: Mediator agent → resolution with recomputed numbers (not yet applied). */
 export async function runMediation(mediationId: string) {
   const db = getDb();
-  const { m, promise, milestone } = await loadMediation(mediationId);
+  const { m, milestone } = await loadMediation(mediationId);
   if (m.status !== "OPEN") return "not_open";
   if (milestone.state !== "MEDIATING") return "milestone_not_mediating";
   await db.update(mediations).set({ status: "RUNNING" }).where(eq(mediations.id, mediationId));

@@ -47,7 +47,6 @@ import {
   validateAgainstSchema,
   type CheckContext,
   type CollectorResult,
-  type Finding,
 } from "@ahadi/verifiers";
 import { actorTag, assertParty, isAdmin, partyRole, SYSTEM, type Actor } from "./actor";
 import { MAX_FILE_BYTES, MAX_SUBMISSION_BYTES, sha256, storeArtifact } from "./artifacts";
@@ -380,19 +379,17 @@ async function pipeline(
     .where(eq(verifications.id, vid));
   if (injectionFlagged) {
     await db.transaction(async (tx) => {
-      await tx
-        .insert(riskFlags)
-        .values({
-          subjectType: "submission",
-          subjectId: sub.id,
-          code: "INJECTION",
-          severity: "high",
-          detail: {
-            verificationId: vid,
-            summary: report?.summaryForClient ?? "Hidden instructions aimed at the AI verifier were found.",
-            findings: strip.slice(0, 10).map((f) => ({ location: f.location, text: f.text.slice(0, 200) })),
-          },
-        });
+      await tx.insert(riskFlags).values({
+        subjectType: "submission",
+        subjectId: sub.id,
+        code: "INJECTION",
+        severity: "high",
+        detail: {
+          verificationId: vid,
+          summary: report?.summaryForClient ?? "Hidden instructions aimed at the AI verifier were found.",
+          findings: strip.slice(0, 10).map((f) => ({ location: f.location, text: f.text.slice(0, 200) })),
+        },
+      });
       await appendLedgerEvent(tx, {
         promiseId: promise.id,
         type: "injection.flagged",
