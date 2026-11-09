@@ -1,0 +1,18 @@
+{
+  "name": "@ahadi/ledger",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./chain": "./src/chain.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@ahadi/core": "*",
+    "@ahadi/db": "*",
+    "drizzle-orm": "^0.44.7"
+  }
+}
