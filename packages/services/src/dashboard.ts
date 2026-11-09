@@ -183,7 +183,7 @@ export async function getDashboardSummary(actor: Actor) {
       const st = m.state as MilestoneState;
       const at = `/promises/${p.id}`;
       const label = `${p.title} · ${m.title}`;
-      if (st === "UNFUNDED" && p.state === "ACTIVE" && role === "client")
+      if (st === "UNFUNDED" && (p.state === "AGREED" || p.state === "ACTIVE") && role === "client")
         attention.push({
           kind: "fund",
           tone: "warn",
