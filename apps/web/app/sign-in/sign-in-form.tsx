@@ -66,7 +66,10 @@ export function SignInForm({
         </Alert>
         {devLink ? (
           <Alert tone="warn" title="Development: email isn't configured">
-            <a className="break-all font-medium text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink" href={devLink}>
+            <a
+              className="break-all font-medium text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink"
+              href={devLink}
+            >
               Open the sign-in link
             </a>
           </Alert>

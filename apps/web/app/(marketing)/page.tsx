@@ -266,7 +266,6 @@ export default async function Landing() {
 
   return (
     <div className="lp min-h-dvh antialiased">
-
       {/* nav */}
       <header className="sticky top-0 z-30 border-b border-l-line bg-l-bg/80 backdrop-blur-md">
         <nav className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-4 sm:px-6" aria-label="Main">
