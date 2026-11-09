@@ -10,6 +10,7 @@ Ahadi (Swahili for *promise*) is a trust layer for paying for work — done by h
 |---|---|
 | 🎥 Demo video | `https://youtu.be/REPLACE_ME` |
 | 🌐 Live demo | `https://ahadi.onrender.com` (sandbox) |
+| 🛠 Setup guide (Neon + PayPal) | [docs/SETUP.md](docs/SETUP.md) |
 | 📐 Technical spec | [docs/SPEC.md](docs/SPEC.md) |
 | 🧠 Agent prompts | [docs/AGENT_PROMPTS.md](docs/AGENT_PROMPTS.md) |
 | 📄 License | [MIT](LICENSE) |
@@ -205,7 +206,7 @@ flowchart LR
 | Web + API | Next.js 15 (App Router), TypeScript, Tailwind CSS v4 |
 | Worker | Node.js 20, BullMQ |
 | MCP server | `@modelcontextprotocol/sdk` (Streamable HTTP) |
-| Database | PostgreSQL + Drizzle ORM |
+| Database | Neon Postgres (pooled for the app, direct for migrations) + Drizzle ORM |
 | Queue / cache | Render Key Value (Redis-compatible) |
 | AI | Anthropic Claude API (`@anthropic-ai/sdk`) |
 | Payments | PayPal REST APIs (sandbox), PayPal JS SDK |
@@ -219,7 +220,8 @@ flowchart LR
 ### Prerequisites
 - Node.js 20+
 - npm 10+
-- Docker (for local Postgres and Redis), or Render-hosted equivalents
+- Redis 7 (`docker compose up -d redis` or any local `redis-server`)
+- A [Neon](https://console.neon.tech) project (free tier is fine)
 - A [PayPal Developer](https://developer.paypal.com/) account
 - An [Anthropic API](https://console.anthropic.com/) key
 
@@ -229,16 +231,17 @@ flowchart LR
 git clone https://github.com/<your-org>/ahadi.git
 cd ahadi
 npm install
-cp .env.example .env.local
-docker compose up -d          # Postgres + Redis
+cp .env.example .env          # fill in Neon + PayPal — see docs/SETUP.md
+docker compose up -d redis
 npm run db:migrate
-npm run db:seed               # demo users, sample promises, fixtures
+npm run db:seed               # demo users + the bakery promise
+npm run paypal:check          # verifies PayPal, Payouts, webhook, DB and Redis
 ```
 
 ### Run
 
 ```bash
-npm run dev                   # web (3000) + worker + MCP server (3001)
+npm run dev                   # web (3000) + worker
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
@@ -247,26 +250,27 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Script | What it does |
 |---|---|
-| `npm run dev` | Runs web, worker and MCP server together |
+| `npm run dev` | Runs web and worker together |
 | `npm run build` | Builds all apps |
-| `npm run test` | Unit tests (settlement engine, state machine, ledger) |
-| `npm run test:e2e` | End-to-end sandbox flow with Playwright |
-| `npm run db:studio` | Opens Drizzle Studio |
-| `npm run paypal:webhook` | Registers the webhook for your sandbox app |
-| `npm run demo:reset` | Resets the demo dataset |
+| `npm run lint` / `npm run typecheck` | ESLint / TypeScript across the monorepo |
+| `npm test` | Unit tests (settlement engine, state machines, ledger chain, PayPal client) |
+| `npm run test:integration` | Money spine end to end against real Postgres + Redis with a stateful fake PayPal |
+| `npm run db:migrate` / `db:generate` / `db:studio` | Drizzle migrations and studio |
+| `npm run db:seed` / `demo:reset` | Seed / reset the demo dataset |
+| `npm run paypal:check` | Verifies credentials, Payouts permission, webhook, DB and Redis |
+| `npm run paypal:webhook` | Registers (or updates) the webhook for your sandbox app |
 
 ## PayPal sandbox setup
 
+Full click-by-click guide: **[docs/SETUP.md](docs/SETUP.md#3-paypal-developer-account-sandbox)**. In short:
+
 1. Log in to the [PayPal Developer Dashboard](https://developer.paypal.com/dashboard/) and switch to **Sandbox**.
-2. **Apps & Credentials → Create App** (type: Merchant). Copy the **Client ID** and **Secret**.
-3. Under the app's features, make sure **Payouts** is enabled.
-4. **Sandbox → Accounts:** create (or reuse) three accounts:
-   - **Business** — Ahadi's platform account (the app owner).
-   - **Personal** — the client / buyer.
-   - **Personal** — the worker / payee.
-5. Put the buyer and worker emails in `.env.local` (`DEMO_BUYER_EMAIL`, `DEMO_WORKER_EMAIL`).
-6. Expose your local server (e.g. `npx cloudflared tunnel --url http://localhost:3000`) and set `APP_URL`.
-7. Run `npm run paypal:webhook` to register `${APP_URL}/api/webhooks/paypal` and save the returned ID as `PAYPAL_WEBHOOK_ID`.
+2. **Testing Tools → Sandbox Accounts:** create a **Business** account (Ahadi's platform), a **Personal** buyer (client) and a **Personal** worker.
+3. **Apps & Credentials → Create App** (type: Merchant, linked to the Business account). Copy the **Client ID** and **Secret**.
+4. Under the app's **Features**, make sure **Payouts** is enabled.
+5. Put the buyer and worker emails in `.env` (`DEMO_BUYER_PAYPAL_EMAIL`, `DEMO_WORKER_PAYPAL_EMAIL`).
+6. Expose your server over HTTPS (e.g. `npx cloudflared tunnel --url http://localhost:3000`) and set `APP_URL`.
+7. Run `npm run paypal:webhook` and save the printed ID as `PAYPAL_WEBHOOK_ID`. Then `npm run paypal:check`.
 
 ## Environment variables
 
@@ -356,20 +360,24 @@ Tools exposed: `search_providers`, `create_promise`, `fund_promise`, `get_promis
 ahadi/
 ├── apps/
 │   ├── web/                  # Next.js app: UI + API routes + webhooks
-│   ├── worker/               # BullMQ worker: agents, verification, settlement
-│   └── mcp/                  # Ahadi MCP server
+│   ├── worker/               # BullMQ worker: settlement, payouts, webhooks, monitors
+│   └── mcp/                  # Ahadi MCP server                        (Phase 5)
 ├── packages/
-│   ├── core/                 # Domain types, state machine, settlement engine
-│   ├── db/                   # Drizzle schema, migrations, seed
+│   ├── core/                 # Pure domain: state machines, settlement engine, money, criteria, env
+│   ├── db/                   # Drizzle schema + migrations, Neon-aware pool
+│   ├── ledger/               # Hash-chained evidence ledger (append, verify)
 │   ├── paypal/               # Typed PayPal REST client + webhook verification
-│   ├── agents/               # Prompts, schemas, agent runners
-│   ├── verifiers/            # Web, code, design, writing, data evidence collectors
-│   ├── ledger/               # Hash-chained evidence ledger + PDF export
-│   └── ui/                   # Shared UI components
-├── fixtures/                 # Demo deliverables (pass, partial, injection)
+│   ├── queue/                # BullMQ job definitions shared by web and worker
+│   ├── services/             # Domain services (funding, settlement, payouts, webhooks, auth, seed)
+│   ├── agents/               # Prompts, schemas, agent runners            (Phase 2)
+│   └── verifiers/            # Web, code, design, writing, data collectors (Phase 3)
+├── scripts/                  # paypal:check, paypal:webhook
+├── fixtures/                 # Demo deliverables                         (Phase 3)
 ├── docs/
+│   ├── SETUP.md
 │   ├── SPEC.md
 │   └── AGENT_PROMPTS.md
+├── .github/workflows/        # CI (lint, typecheck, tests, build) + deploy
 ├── docker-compose.yml
 ├── render.yaml
 ├── .env.example
@@ -387,11 +395,19 @@ ahadi/
 - **Tamper-evident history.** Ledger events are hash-chained; any edit breaks the chain.
 - **Sandbox only** for this submission. No real funds move.
 
-## Roadmap
+## Build status
 
-- [x] Promise engine: contract builder, authorize, verify, partial capture, payouts
-- [x] Evidence ledger and Passport
-- [x] MCP server with spending mandates
+Built in the phases of [SPEC §25](docs/SPEC.md#25-build-order).
+
+- [x] **Phase 1 — Money spine:** monorepo, full schema on Neon, typed PayPal client, fund page (authorize), webhooks, partial `final_capture`, void, Payouts with splits, reconciliation, authorization monitor, hash-chained ledger, admin manual verdict, CI
+- [ ] **Phase 2 — Promise engine:** Contract Architect + Critic, terms editor, signing
+- [ ] **Phase 3 — Verification:** web collector, Injection Sentinel, live verification UI, objection window
+- [ ] **Phase 4 — Trust layer:** more verifiers, Mediator, evidence-pack PDF, Passport
+- [ ] **Phase 5 — Agent economy:** MCP server, mandates, Kazi Research Agent
+- [ ] **Phase 6 — Reach and polish:** WhatsApp, voice briefs, AG Grid admin, Ops Agent
+
+## Roadmap (beyond the hackathon)
+
 - [ ] PayPal multiparty with delayed disbursement (worker as payee)
 - [ ] Stablecoin payout rail
 - [ ] Platform API with webhooks for partners
