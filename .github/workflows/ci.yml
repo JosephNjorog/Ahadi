@@ -91,7 +91,7 @@ jobs:
       - run: npm run build
       - name: Migrations are in sync with the schema
         run: |
-          npm run db:generate -- --name ci_check
+          (cd packages/db && npx drizzle-kit generate --name ci_check)
           if [ -n "$(git status --porcelain packages/db/drizzle)" ]; then
             echo "::error::packages/db/src/schema.ts changed without a migration. Run npm run db:generate and commit it."
             git status --porcelain packages/db/drizzle
