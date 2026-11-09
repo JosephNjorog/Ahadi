@@ -1,0 +1,61 @@
+# Render Blueprint (SPEC §23), adapted:
+#  - Database is Neon (not Render Postgres): set DATABASE_URL / DATABASE_URL_UNPOOLED yourself.
+#  - Free plan: the BullMQ worker runs inside the web server (RUN_WORKER_IN_WEB=true).
+#    To split it out later, upgrade, add a `type: worker` service with
+#    `startCommand: npm run start --workspace=@ahadi/worker`, and set RUN_WORKER_IN_WEB=false on web.
+#  - Deploys from main only after GitHub CI checks pass (autoDeployTrigger: checksPass).
+#  - Redis is external (the account's one free Key Value is used by another project).
+services:
+  - type: web
+    name: ahadi-web
+    runtime: node
+    plan: free
+    region: frankfurt
+    branch: main
+    autoDeployTrigger: checksPass
+    # Live service: srv-dbolqp5g1s2s73fjsv60 → https://ahadi-web.onrender.com
+    # Free plan has no pre-deploy step, so migrations run at the end of the build.
+    buildCommand: npm ci && npm run build --workspace=@ahadi/web && npm run db:migrate
+    startCommand: npm run start --workspace=@ahadi/web
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: AHADI_SERVICE
+        value: web
+      - key: RUN_WORKER_IN_WEB
+        value: "true"
+      - key: WORKER_CONCURRENCY
+        value: "2"
+      - key: PAYPAL_ENV
+        value: sandbox
+      - key: DEMO_MODE
+        value: "true"
+      - key: OBJECTION_WINDOW_HOURS
+        value: "0.05"
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: REDIS_URL # Upstash (rediss://…) or a Render Key Value with maxmemoryPolicy noeviction
+        sync: false
+      - key: APP_URL
+        sync: false
+      - key: DATABASE_URL # Neon pooled connection string
+        sync: false
+      - key: DATABASE_URL_UNPOOLED # Neon direct connection string (migrations)
+        sync: false
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: NEXT_PUBLIC_PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: DEMO_BUYER_PAYPAL_EMAIL
+        sync: false
+      - key: DEMO_WORKER_PAYPAL_EMAIL
+        sync: false
