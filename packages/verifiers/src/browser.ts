@@ -32,3 +32,33 @@ export async function closeBrowser() {
   shared = null;
   await b?.close().catch(() => undefined);
 }
+
+/**
+ * Drop the shared browser without waiting for it: used when Chromium stops
+ * responding (for example a page or context close that never returns), so the
+ * next collection launches a fresh browser instead of queueing behind a wedged one.
+ */
+export function discardBrowser() {
+  const current = shared;
+  shared = null;
+  void current?.then((b) => b?.close().catch(() => undefined));
+}
+
+/**
+ * Wait for a teardown step (page or context close) for at most `ms`.
+ * Returns false when it did not finish in time; the caller carries on regardless.
+ */
+export async function settleWithin(p: Promise<unknown>, ms: number): Promise<boolean> {
+  let timer: NodeJS.Timeout | undefined;
+  const done = await Promise.race([
+    p.then(
+      () => true,
+      () => true,
+    ),
+    new Promise<boolean>((r) => {
+      timer = setTimeout(() => r(false), ms);
+    }),
+  ]);
+  clearTimeout(timer);
+  return done;
+}
