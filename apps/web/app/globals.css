@@ -1,49 +1,107 @@
 @import "tailwindcss";
 
-/* Ahadi design tokens. Green = secured/trust, amber = waiting on someone, red = blocked. */
+/*
+ * Ahadi design tokens. The product is monochrome; colour only carries meaning:
+ * green = secured / verified / paid, amber = waiting on someone, red = blocked or failed.
+ * Light/dark: <html data-theme="light|dark"> wins; without it, the OS preference applies.
+ */
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-sans:
+    var(--font-geist-sans), "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-geist-mono), "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  --color-ink: #0f1f1a;
-  --color-ink-muted: #4b5d57;
-  --color-ink-subtle: #7b8c86;
-  --color-canvas: #f6f8f7;
+  --color-ink: #0a0a0a;
+  --color-ink-muted: #5f5f5f;
+  --color-ink-subtle: #8f8f8f;
+  --color-canvas: #fafafa;
   --color-surface: #ffffff;
-  --color-line: #e2e8e5;
+  --color-line: #e8e8e8;
+  --color-line-strong: #d4d4d4;
+  --color-raised: #f4f4f5;
 
-  --color-brand-50: #ecfdf5;
-  --color-brand-100: #d1fae5;
-  --color-brand-500: #10a36b;
-  --color-brand-600: #0b8a5a;
-  --color-brand-700: #086b46;
-  --color-brand-900: #053d29;
+  /* Primary actions: ink on light, near-white on dark. */
+  --color-accent: #0a0a0a;
+  --color-accent-fg: #fafafa;
+  --color-accent-hover: #262626;
+
+  /* "Secured / verified / paid" green. */
+  --color-brand-50: #ecfdf3;
+  --color-brand-100: #d1fadf;
+  --color-brand-500: #16a34a;
+  --color-brand-600: #15803d;
+  --color-brand-700: #166534;
+  --color-brand-900: #052e16;
 
   --color-warn-50: #fffbeb;
   --color-warn-600: #b45309;
   --color-danger-50: #fef2f2;
-  --color-danger-600: #c62828;
+  --color-danger-600: #dc2626;
   --color-info-50: #eff6ff;
   --color-info-600: #1d4ed8;
 
   --radius-card: 14px;
-  --shadow-card: 0 1px 2px rgb(15 31 26 / 0.04), 0 4px 16px rgb(15 31 26 / 0.04);
+  --shadow-card: 0 1px 1px rgb(0 0 0 / 0.02), 0 6px 20px -8px rgb(0 0 0 / 0.08);
 }
 
+/* Dark palette, applied by preference unless the viewer picked light, or when they picked dark. */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --color-ink: #e7efec;
-    --color-ink-muted: #a9bab4;
-    --color-ink-subtle: #7f918b;
-    --color-canvas: #0b1411;
-    --color-surface: #111d19;
-    --color-line: #22322d;
-    --color-brand-50: #0c2a1f;
-    --color-brand-100: #113a2b;
-    --color-warn-50: #2a1f0b;
-    --color-danger-50: #2c1212;
-    --color-info-50: #0f1a33;
+  :root:not([data-theme="light"]) {
+    --color-ink: #ededed;
+    --color-ink-muted: #a1a1a1;
+    --color-ink-subtle: #6e6e6e;
+    --color-canvas: #0a0a0a;
+    --color-surface: #141414;
+    --color-line: #232323;
+    --color-line-strong: #333333;
+    --color-raised: #1c1c1c;
+    --color-accent: #ededed;
+    --color-accent-fg: #0a0a0a;
+    --color-accent-hover: #d4d4d4;
+    --color-brand-50: rgb(74 222 128 / 0.1);
+    --color-brand-100: rgb(74 222 128 / 0.18);
+    --color-brand-500: #4ade80;
+    --color-brand-600: #4ade80;
+    --color-brand-700: #86efac;
+    --color-brand-900: #dcfce7;
+    --color-warn-50: rgb(251 191 36 / 0.1);
+    --color-warn-600: #fbbf24;
+    --color-danger-50: rgb(248 113 113 / 0.1);
+    --color-danger-600: #f87171;
+    --color-info-50: rgb(96 165 250 / 0.1);
+    --color-info-600: #93c5fd;
+    --shadow-card: 0 0 0 1px rgb(255 255 255 / 0.02), 0 10px 30px -12px rgb(0 0 0 / 0.6);
+    color-scheme: dark;
   }
+}
+:root[data-theme="dark"] {
+  --color-ink: #ededed;
+  --color-ink-muted: #a1a1a1;
+  --color-ink-subtle: #6e6e6e;
+  --color-canvas: #0a0a0a;
+  --color-surface: #141414;
+  --color-line: #232323;
+  --color-line-strong: #333333;
+  --color-raised: #1c1c1c;
+  --color-accent: #ededed;
+  --color-accent-fg: #0a0a0a;
+  --color-accent-hover: #d4d4d4;
+  --color-brand-50: rgb(74 222 128 / 0.1);
+  --color-brand-100: rgb(74 222 128 / 0.18);
+  --color-brand-500: #4ade80;
+  --color-brand-600: #4ade80;
+  --color-brand-700: #86efac;
+  --color-brand-900: #dcfce7;
+  --color-warn-50: rgb(251 191 36 / 0.1);
+  --color-warn-600: #fbbf24;
+  --color-danger-50: rgb(248 113 113 / 0.1);
+  --color-danger-600: #f87171;
+  --color-info-50: rgb(96 165 250 / 0.1);
+  --color-info-600: #93c5fd;
+  --shadow-card: 0 0 0 1px rgb(255 255 255 / 0.02), 0 10px 30px -12px rgb(0 0 0 / 0.6);
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
 }
 
 html {
@@ -53,10 +111,10 @@ body {
   background: var(--color-canvas);
   color: var(--color-ink);
   font-family: var(--font-sans);
-  font-feature-settings: "cv11", "ss01";
+  letter-spacing: -0.006em;
 }
 :focus-visible {
-  outline: 2px solid var(--color-brand-500);
+  outline: 2px solid var(--color-ink);
   outline-offset: 2px;
 }
 .tabular {
@@ -113,7 +171,7 @@ body {
 }
 
 @media (prefers-color-scheme: dark) {
-  .lp:not([data-theme="light"]) {
+  :root:not([data-theme="light"]) .lp {
     --lp-bg: #0a0a0a;
     --lp-bg2: #111111;
     --lp-card: #141414;
@@ -133,7 +191,7 @@ body {
     color-scheme: dark;
   }
 }
-.lp[data-theme="dark"] {
+:root[data-theme="dark"] .lp {
   --lp-bg: #0a0a0a;
   --lp-bg2: #111111;
   --lp-card: #141414;
