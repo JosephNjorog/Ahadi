@@ -42,14 +42,15 @@ async function checkPayPal() {
   }
   ok(`OAuth token issued (${env}, app ${body.app_id ?? "?"})`);
   const scopes = (body.scope ?? "").split(" ");
+  // PayPal has used more than one URI for some scopes; any listed alias counts.
   const need: [string, string][] = [
     ["https://uri.paypal.com/services/payments/payment/authcapture", "Authorize & capture"],
-    ["https://uri.paypal.com/services/payments/payouts", "Payouts"],
+    ["https://uri.paypal.com/services/payments/payouts|https://uri.paypal.com/payments/payouts", "Payouts"],
     ["https://uri.paypal.com/services/payments/refund", "Refunds"],
     ["https://uri.paypal.com/services/disputes/read-seller", "Disputes (read)"],
   ];
   for (const [scope, label] of need) {
-    if (scopes.includes(scope)) ok(`${label} enabled`);
+    if (scope.split("|").some((x) => scopes.includes(x))) ok(`${label} enabled`);
     else if (label === "Payouts") {
       fail(`${label} NOT enabled — Developer Dashboard → your app → Features → check "Payouts" → Save`);
       failures++;
