@@ -174,17 +174,15 @@ export async function seed({ resetFirst = false } = {}) {
           maxAttempts: env.MAX_ATTEMPTS,
         })
         .returning();
-      await tx
-        .insert(criteria)
-        .values(
-          m.criteria.map((c) => ({
-            milestoneId: row!.id,
-            key: c.id,
-            spec: c,
-            weight: c.weight,
-            required: c.required,
-          })),
-        );
+      await tx.insert(criteria).values(
+        m.criteria.map((c) => ({
+          milestoneId: row!.id,
+          key: c.id,
+          spec: c,
+          weight: c.weight,
+          required: c.required,
+        })),
+      );
     }
 
     for (const [party, signer] of [
