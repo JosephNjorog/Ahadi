@@ -1,5 +1,5 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
-import { AppError, fromPayPalValue, idempotencyKeys, toPayPalValue } from "@ahadi/core";
+import { AppError, formatMoney, fromPayPalValue, idempotencyKeys, toPayPalValue } from "@ahadi/core";
 import { getEnv } from "@ahadi/core/env";
 import { fundings, getDb, milestones, promises, type Funding, type Tx } from "@ahadi/db";
 import { appendLedgerEvent } from "@ahadi/ledger";
@@ -8,11 +8,14 @@ import {
   authorizeOrder,
   createAuthorizeOrder,
   extractAuthorization,
+  approvalUrl,
   getOrder,
   type Authorization,
 } from "@ahadi/paypal";
 import { actorTag, assertParty, type Actor } from "./actor";
 import { log } from "./log";
+import { notify } from "./notify";
+import { enqueue } from "@ahadi/queue";
 import { getPayPal } from "./paypal";
 import { applyMilestoneEvent, lockMilestone } from "./transitions";
 
@@ -43,7 +46,7 @@ export async function getLiveFunding(
 export async function createMilestoneOrder(
   actor: Actor,
   milestoneId: string,
-): Promise<{ orderId: string; fundingId: string }> {
+): Promise<{ orderId: string; fundingId: string; approvalUrl: string | null }> {
   const db = getDb();
   const env = getEnv();
 
@@ -120,7 +123,7 @@ export async function createMilestoneOrder(
     { promise_id: promise.id, milestone_id: milestone.id, order_id: order.data.id, attempt },
     "funding order created",
   );
-  return { orderId: order.data.id, fundingId };
+  return { orderId: order.data.id, fundingId, approvalUrl: approvalUrl(order.data) ?? null };
 }
 
 /**
@@ -173,6 +176,43 @@ export async function authorizeMilestoneOrder(
  * "Funds secured" requires an authorization with status CREATED (SPEC §6.3).
  */
 export async function recordAuthorization(args: {
+  milestoneId: string;
+  orderId: string;
+  authorization: Authorization;
+  rawOrder?: unknown;
+  actor: Actor;
+  source: "api" | "webhook";
+}): Promise<Funding> {
+  const before = await getDb()
+    .select({ status: fundings.status })
+    .from(fundings)
+    .where(eq(fundings.paypalOrderId, args.orderId));
+  const funding = await recordAuthorizationTx(args);
+  const newlySecured =
+    !["AUTHORIZED", "REAUTHORIZED"].includes(before[0]?.status ?? "") &&
+    (funding.status === "AUTHORIZED" || funding.status === "REAUTHORIZED");
+  if (newlySecured) await afterFundsSecured(args.milestoneId, funding);
+  return funding;
+}
+
+async function afterFundsSecured(milestoneId: string, funding: Funding) {
+  const db = getDb();
+  const [m] = await db.select().from(milestones).where(eq(milestones.id, milestoneId));
+  const [p] = await db.select().from(promises).where(eq(promises.id, m!.promiseId));
+  await notify({
+    userId: p!.workerUserId,
+    template: "funds_secured",
+    title: `Funds secured: ${p!.title}`,
+    body: `PayPal is holding ${formatMoney(funding.amountMinor, funding.currency)} for "${m!.title}". You can start work now; payment is released when the work is verified.`,
+    link: `/promises/${p!.id}`,
+    promiseId: p!.id,
+  });
+  if (p!.workerAgentId)
+    await enqueue("provider.dispatch", { promiseId: p!.id, milestoneId, event: "job.funded" });
+  await enqueue("risk.score", { promiseId: p!.id, trigger: "funded" });
+}
+
+async function recordAuthorizationTx(args: {
   milestoneId: string;
   orderId: string;
   authorization: Authorization;

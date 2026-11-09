@@ -8,6 +8,9 @@ import { SYSTEM } from "./actor";
 import { loadSettlementContext } from "./context";
 import { log } from "./log";
 import { getPayPal } from "./paypal";
+import { payoutOnHold } from "./risk";
+import { notify } from "./notify";
+import { enqueue } from "@ahadi/queue";
 import { applyMilestoneEvent } from "./transitions";
 
 /**
@@ -30,6 +33,8 @@ export async function sendPayout(
 
   const existing = await db.select().from(payouts).where(eq(payouts.settlementId, settlementId));
   if (existing.some((p) => p.paypalPayoutBatchId)) return { status: "already_sent" };
+  if (await payoutOnHold(promise.id))
+    throw new AppError("CONFLICT", "Payout is on hold pending a risk review by an Ahadi admin");
 
   // Recipients: explicit team splits, else 100% to the worker's PayPal email.
   let recipients = (await db.select().from(splits).where(eq(splits.milestoneId, milestone.id))).map((s) => ({
@@ -205,6 +210,16 @@ async function completeSettlement(settlementId: string, reason: "paid" | "nothin
       });
     }
   });
+  await afterSettled(
+    ctx.promise.id,
+    ctx.milestone.id,
+    ctx.promise.workerUserId,
+    ctx.promise.clientUserId,
+    ctx.settlement?.capturedMinor ?? 0,
+    ctx.promise.currency,
+    ctx.milestone.title,
+    ctx.promise.workerAgentId,
+  );
 }
 
 /** payout.reconcile (every 15 min, SPEC §17): poll batches that still have non-final items. */
@@ -246,4 +261,42 @@ export async function reconcilePayouts(
     }
   }
   return { batches: batchIds.length, updated };
+}
+
+/** Settlement follow-ups (SPEC §17): passport, provider event, notifications, risk. */
+export async function afterSettled(
+  promiseId: string,
+  milestoneId: string,
+  workerUserId: string | null,
+  clientUserId: string | null,
+  capturedMinor: number,
+  currency: string,
+  title: string,
+  workerAgentId: string | null,
+) {
+  if (workerUserId) await enqueue("passport.recompute", { userId: workerUserId });
+  if (workerAgentId) await enqueue("provider.dispatch", { promiseId, milestoneId, event: "job.paid" });
+  await enqueue("risk.score", { promiseId, trigger: "payout" });
+  await notify({
+    userId: workerUserId,
+    template: "payment_sent",
+    title: `You've been paid: ${title}`,
+    body:
+      capturedMinor > 0
+        ? `${formatMoney(capturedMinor, currency)} was released after verification and sent to your PayPal. You can withdraw to M-Pesa from the M-Pesa app.`
+        : "This milestone closed without a release.",
+    link: `/promises/${promiseId}`,
+    promiseId,
+  });
+  await notify({
+    userId: clientUserId,
+    template: "payment_sent",
+    title: `Milestone settled: ${title}`,
+    body:
+      capturedMinor > 0
+        ? `${formatMoney(capturedMinor, currency)} was captured for verified work; any remainder of the hold was released to you.`
+        : "Nothing was captured; the PayPal hold was released.",
+    link: `/promises/${promiseId}`,
+    promiseId,
+  });
 }
