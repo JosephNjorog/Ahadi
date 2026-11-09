@@ -14,6 +14,28 @@ export interface JobPayloads {
   "payout.send": { settlementId: string };
   "payout.reconcile": { settlementId?: string };
   "authorization.monitor": Record<string, never>;
+  "contract.generate": {
+    promiseId: string;
+    editRequest?: string;
+    authorId?: string | null;
+    requestKey: string;
+  };
+  "critique.run": { termsVersionId: string };
+  "verification.run": { submissionId: string };
+  "objection.expire": { proposalId: string };
+  "objection.sweep": Record<string, never>;
+  "mediation.run": { mediationId: string };
+  "risk.score": { promiseId: string; trigger: "created" | "funded" | "payout" };
+  "passport.recompute": { userId: string };
+  "notify.send": { notificationId: string };
+  "provider.dispatch": {
+    promiseId: string;
+    milestoneId: string;
+    event: "job.funded" | "job.verdict" | "job.paid";
+  };
+  "kazi.run": { promiseId: string; milestoneId: string };
+  "whatsapp.inbound": { messageId: string };
+  "ledger.anchor": Record<string, never>;
 }
 export type JobName = keyof JobPayloads;
 
@@ -26,6 +48,26 @@ export function jobIdFor<N extends JobName>(name: N, data: JobPayloads[N]): stri
       return `settle-${(data as JobPayloads["settlement.execute"]).proposalId}`;
     case "payout.send":
       return `payout-${(data as JobPayloads["payout.send"]).settlementId}`;
+    case "contract.generate":
+      return `contract-${(data as JobPayloads["contract.generate"]).requestKey}`;
+    case "critique.run":
+      return `critique-${(data as JobPayloads["critique.run"]).termsVersionId}`;
+    case "verification.run":
+      return `verify-${(data as JobPayloads["verification.run"]).submissionId}`;
+    case "objection.expire":
+      return `objection-${(data as JobPayloads["objection.expire"]).proposalId}`;
+    case "mediation.run":
+      return `mediation-${(data as JobPayloads["mediation.run"]).mediationId}`;
+    case "notify.send":
+      return `notify-${(data as JobPayloads["notify.send"]).notificationId}`;
+    case "provider.dispatch": {
+      const d = data as JobPayloads["provider.dispatch"];
+      return `provider-${d.milestoneId}-${d.event.replace(".", "-")}`;
+    }
+    case "kazi.run":
+      return `kazi-${(data as JobPayloads["kazi.run"]).milestoneId}`;
+    case "whatsapp.inbound":
+      return `wa-${(data as JobPayloads["whatsapp.inbound"]).messageId}`;
     default:
       return undefined;
   }
