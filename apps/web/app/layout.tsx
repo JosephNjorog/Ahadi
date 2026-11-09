@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.APP_URL || "http://localhost:3000"),
   title: { default: "Ahadi — paid when the work is verified", template: "%s · Ahadi" },
   description:
     "Ahadi turns every payment for work into a promise: terms agreed in advance, funds secured through PayPal, money released only when the work is verified.",
