@@ -1,0 +1,80 @@
+# Render Blueprint (SPEC §23), adapted: the database is Neon, not Render Postgres.
+# Auto-deploy is off; .github/workflows/deploy.yml triggers deploys from main after CI passes.
+services:
+  - type: web
+    name: ahadi-web
+    runtime: node
+    plan: starter
+    region: frankfurt
+    autoDeploy: false
+    buildCommand: npm ci && npm run build --workspace=@ahadi/web
+    preDeployCommand: npm run db:migrate
+    startCommand: npm run start --workspace=@ahadi/web
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: AHADI_SERVICE
+        value: web
+      - key: REDIS_URL
+        fromService: { type: keyvalue, name: ahadi-kv, property: connectionString }
+      - fromGroup: ahadi-secrets
+
+  - type: worker
+    name: ahadi-worker
+    runtime: node
+    plan: starter
+    region: frankfurt
+    autoDeploy: false
+    # Phase 3 switches this to Docker (Chromium for Playwright/Lighthouse).
+    buildCommand: npm ci
+    startCommand: npm run start --workspace=@ahadi/worker
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: AHADI_SERVICE
+        value: worker
+      - key: REDIS_URL
+        fromService: { type: keyvalue, name: ahadi-kv, property: connectionString }
+      - fromGroup: ahadi-secrets
+
+  - type: keyvalue
+    name: ahadi-kv
+    plan: starter
+    region: frankfurt
+    maxmemoryPolicy: noeviction # required by BullMQ
+    ipAllowList: [] # only Render services in this account
+
+envVarGroups:
+  - name: ahadi-secrets
+    envVars:
+      - key: APP_URL
+        sync: false
+      - key: DATABASE_URL # Neon pooled connection string
+        sync: false
+      - key: DATABASE_URL_UNPOOLED # Neon direct connection string (migrations)
+        sync: false
+      - key: PAYPAL_ENV
+        value: sandbox
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: NEXT_PUBLIC_PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: DEMO_MODE
+        value: "true"
+      - key: DEMO_BUYER_PAYPAL_EMAIL
+        sync: false
+      - key: DEMO_WORKER_PAYPAL_EMAIL
+        sync: false
+      - key: OBJECTION_WINDOW_HOURS
+        value: "0.05"
