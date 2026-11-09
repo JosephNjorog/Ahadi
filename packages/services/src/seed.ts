@@ -11,7 +11,20 @@ const { getEnv } = await import("@ahadi/core/env");
 const db = await import("@ahadi/db");
 const { appendLedgerEvent } = await import("@ahadi/ledger");
 
-const { getDb, closeDb, users, promises, termsVersions, signatures, milestones, criteria } = db;
+const {
+  getDb,
+  closeDb,
+  users,
+  promises,
+  termsVersions,
+  signatures,
+  milestones,
+  criteria,
+  agents,
+  mandates,
+  services,
+  passports,
+} = db;
 
 /** The demo promise from README "Running the demo": $400, one milestone, four criteria at 25 each. */
 export const BAKERY_TERMS: TermsBody = {
@@ -99,7 +112,8 @@ async function reset() {
   await d.execute(sql`
     truncate table payouts, settlements, proposals, criterion_results, artifacts, verifications, submissions,
       mediations, splits, fundings, criteria, signatures, ledger_events, milestones, terms_versions,
-      promises, mandates, services, agents, risk_flags, webhook_events, job_failures, auth_tokens restart identity cascade
+      promises, mandates, services, agent_actions, agents, risk_flags, webhook_events, job_failures, auth_tokens,
+      agent_runs, passports, notifications, whatsapp_messages, ledger_anchors restart identity cascade
   `);
 }
 
@@ -122,6 +136,7 @@ export async function seed({ resetFirst = false } = {}) {
 
   const existing = await d.select().from(promises).where(eq(promises.title, BAKERY_TERMS.title));
   if (existing.length > 0) {
+    await seedAgentEconomy(client.id);
     console.log(`Demo promise already exists (${existing[0]!.id}). Use npm run demo:reset to start over.`);
     return existing[0]!.id;
   }
@@ -219,6 +234,147 @@ export async function seed({ resetFirst = false } = {}) {
       "DEMO_WORKER_PAYPAL_EMAIL is empty — payouts will fail until the worker adds a PayPal email.",
     );
   return promiseId;
+}
+
+/** Kazi Research Agent (provider) with seeded verified history, and a buyer agent for the client (SPEC §14, §27). */
+async function seedAgentEconomy(clientId: string) {
+  const d = getDb();
+  const { createHash, randomBytes } = await import("node:crypto");
+  const kaziOwner = await upsertUser("kazi@ahadi.test", "Kazi Labs", {
+    country: "KE",
+    paypalEmail: process.env.DEMO_WORKER_PAYPAL_EMAIL ?? null,
+    passportSlug: "kazi",
+  });
+  let [kazi] = await d.select().from(agents).where(eq(agents.name, "Kazi Research Agent"));
+  if (!kazi) {
+    const key = `ahk_${randomBytes(24).toString("base64url")}`;
+    [kazi] = await d
+      .insert(agents)
+      .values({
+        ownerId: kaziOwner.id,
+        name: "Kazi Research Agent",
+        kind: "provider",
+        description: "Sourced research reports with verifiable citations.",
+        providerWebhookUrl: "internal:kazi",
+        apiKeyHash: createHash("sha256").update(key).digest("hex"),
+        apiKeyPrefix: key.slice(0, 12),
+      })
+      .returning();
+  }
+  const [svc] = await d.select().from(services).where(eq(services.providerAgentId, kazi!.id));
+  if (!svc) {
+    await d.insert(services).values({
+      providerUserId: kaziOwner.id,
+      providerAgentId: kazi!.id,
+      category: "research",
+      title: "Sourced research report (1,000–2,000 words)",
+      description:
+        "A Markdown research report on any market or policy question, with numbered citations to real, reachable sources. Paid only if verification passes.",
+      priceMinor: 2500,
+      turnaroundHours: 1,
+      defaultCriteria: [
+        {
+          id: "c1",
+          title: "Cites at least 8 reachable sources",
+          description: "The Sources list has at least 8 distinct URLs that resolve.",
+          weight: 40,
+          required: true,
+          method: "automated",
+          check: { kind: "min_citations", count: 8, mustResolve: true },
+          evidence: ["citations"],
+          partialCredit: false,
+        },
+        {
+          id: "c2",
+          title: "Length 1,000–2,000 words",
+          description: "The report body is between 1,000 and 2,000 words.",
+          weight: 20,
+          required: false,
+          method: "automated",
+          check: { kind: "word_count", min: 1000, max: 2000 },
+          evidence: ["text_content"],
+          partialCredit: false,
+        },
+        {
+          id: "c3",
+          title: "Sampled claims are supported by their sources",
+          description: "At least 4 of 5 sampled cited claims are supported by the fetched source text.",
+          weight: 40,
+          required: false,
+          method: "ai_judgment",
+          evidence: ["citations", "text_content"],
+          partialCredit: true,
+        },
+      ],
+    });
+  }
+  await d
+    .insert(passports)
+    .values({
+      userId: kaziOwner.id,
+      slug: "kazi",
+      score: 0.86,
+      stats: {
+        displayName: "Kazi Labs",
+        country: "KE",
+        memberSince: new Date(Date.now() - 120 * 86400_000).toISOString(),
+        lastActive: new Date().toISOString(),
+        settledCount: 14,
+        totalVerifiedMinor: 52_500,
+        totalVerifiedBucket: "$500–1k",
+        firstPassRate: 0.86,
+        avgReleaseRate: 0.95,
+        categories: { research: 14 },
+        recentWork: [
+          {
+            title: "Kenya dairy cooperatives: market brief",
+            category: "research",
+            settledAt: new Date(Date.now() - 3 * 86400_000).toISOString(),
+            releasePct: 100,
+            client: "A. M.",
+          },
+          {
+            title: "East Africa solar cold storage operators",
+            category: "research",
+            settledAt: new Date(Date.now() - 9 * 86400_000).toISOString(),
+            releasePct: 100,
+            client: "J. K.",
+          },
+        ],
+        disputes: { opened: 0, resolvedInFavor: 0 },
+        agentProvider: true,
+        seededDemoHistory: true,
+      },
+    })
+    .onConflictDoNothing();
+
+  // Buyer agent for the client, with a mandate (research only, $50/job, $200/month, provider score ≥ 0.7).
+  const [buyer] = await d.select().from(agents).where(eq(agents.name, "Njeri's Assistant"));
+  if (!buyer) {
+    const key = `ahk_${randomBytes(24).toString("base64url")}`;
+    const [b] = await d
+      .insert(agents)
+      .values({
+        ownerId: clientId,
+        name: "Njeri's Assistant",
+        kind: "buyer",
+        description: "Claude Desktop, hiring research for the bakery.",
+        apiKeyHash: createHash("sha256").update(key).digest("hex"),
+        apiKeyPrefix: key.slice(0, 12),
+      })
+      .returning();
+    await d
+      .insert(mandates)
+      .values({
+        agentId: b!.id,
+        perJobMaxMinor: 5000,
+        monthlyMaxMinor: 20_000,
+        allowedCategories: ["research", "writing"],
+        minProviderScore: 0.7,
+        requireOwnerApprovalAboveMinor: null,
+      });
+    console.log(`\nBuyer agent API key (shown once — put it in your MCP client config):\n  ${key}\n`);
+  }
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
