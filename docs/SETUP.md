@@ -216,7 +216,7 @@ The Render web service already exists: **ahadi-web** → https://ahadi-web.onren
    | `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` | from section 3.3 |
    | `NEXT_PUBLIC_PAYPAL_CLIENT_ID` | same as `PAYPAL_CLIENT_ID` |
    | `DEMO_BUYER_PAYPAL_EMAIL`, `DEMO_WORKER_PAYPAL_EMAIL` | sandbox personal accounts |
-   | `ANTHROPIC_API_KEY` | from https://console.anthropic.com/settings/keys |
+   | `OPENROUTER_API_KEY` | from https://openrouter.ai/settings/keys (free models work with a $0 balance) |
    | `PAYPAL_WEBHOOK_ID` | after step 4 |
 
    Already set for you: `APP_URL`, `SESSION_SECRET` (generated), `PAYPAL_ENV=sandbox`, `DEMO_MODE=true`, `RUN_WORKER_IN_WEB=true`, `OBJECTION_WINDOW_HOURS=0.05`, `NODE_VERSION=22`.
@@ -233,7 +233,7 @@ The Render web service already exists: **ahadi-web** → https://ahadi-web.onren
 
 | Feature | Variables | Where to get them | Without it |
 |---|---|---|---|
-| **AI agents** (Contract Architect, Critic, Sentinel, Verifiers, Reviewer, Mediator, Explainer, Risk Analyst, Concierge, Ops Agent, Kazi) | `ANTHROPIC_API_KEY` (+ optional `MODEL_ARCHITECT`, `MODEL_VERIFIER`, `MODEL_FAST`) | https://console.anthropic.com/settings/keys | Terms are written by hand; AI-judged criteria go to a human reviewer; mediation goes to an admin. Machine checks still run. |
+| **AI agents** (Contract Architect, Critic, Sentinel, Verifiers, Reviewer, Mediator, Explainer, Risk Analyst, Concierge, Ops Agent, Kazi) | `OPENROUTER_API_KEY` (+ optional `OPENROUTER_MODEL_*`), or `ANTHROPIC_API_KEY` with `AI_PROVIDER=anthropic` | https://openrouter.ai/settings/keys · https://console.anthropic.com/settings/keys | Terms are written by hand; AI-judged criteria go to a human reviewer; mediation goes to an admin. Machine checks still run. |
 | **Website screenshots** | `PLAYWRIGHT_CHROMIUM_EXECUTABLE` (Docker), or run `npx playwright-core install chromium-headless-shell` in the build | — | Fetch-only evidence: HTML/text checks run; visual and layout criteria go to a human. |
 | **Code builds/tests** | `SANDBOX_PROVIDER=e2b`, `SANDBOX_API_KEY` | https://e2b.dev/dashboard | Static analysis only; build/test criteria go to a human. |
 | **Private repos** | `GITHUB_TOKEN` (read-only, fine-grained) | https://github.com/settings/personal-access-tokens | Public repos only. |
@@ -257,7 +257,7 @@ The Render web service already exists: **ahadi-web** → https://ahadi-web.onren
 | Payout fails with `INSUFFICIENT_FUNDS` | Add balance to the `ahadi-platform` Business sandbox account (Sandbox Accounts → ⋯ → Edit). |
 | Webhook returns 400 | Signature verification failed. Either it came from the simulator, or `PAYPAL_WEBHOOK_ID` belongs to a different app or URL. Re-run `npm run paypal:webhook`. |
 | `/api/health` → `queue: error` | Redis isn't running or `REDIS_URL` is wrong (Upstash needs the `rediss://` URL). |
-| Terms stay "drafting" | No worker is consuming jobs: set `RUN_WORKER_IN_WEB=true` (free plan) or run the worker service. Check `ANTHROPIC_API_KEY`. |
+| Terms stay "drafting" | No worker is consuming jobs: set `RUN_WORKER_IN_WEB=true` (free plan) or run the worker service. Check the AI key (`OPENROUTER_API_KEY`). |
 | Verification "needs a human" for visual criteria | No Chromium available on the host; see section 9. |
 | MCP returns 401 | The agent key is wrong or revoked; create or rotate it on Agents. |
 | Jobs never run | The worker isn't running (`npm run dev` starts it; on Render check `ahadi-worker` logs). |

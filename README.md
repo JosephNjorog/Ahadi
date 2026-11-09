@@ -155,7 +155,8 @@ Production path (documented in the spec): PayPal's multiparty platform with **de
 | **Playwright + Lighthouse** | Evidence collection for website verification (screenshots, performance, DOM checks). |
 | **Sandboxed code runner** (Vercel Sandbox or E2B) | Running submitted test suites in isolation. |
 | **Model Context Protocol** | Ahadi's own MCP server, plus PayPal's MCP server for ops. |
-| **Claude Code** | Used to build this project. |
+
+**Model provider.** Agents run through **OpenRouter** (`OPENROUTER_API_KEY`) or the **Anthropic API** (`ANTHROPIC_API_KEY`); set `AI_PROVIDER` to choose. With OpenRouter, the defaults are free models (`nvidia/nemotron-3.5-super-vl:free`, falling back to `google/gemma-4-31b-it:free`); override per role with `OPENROUTER_MODEL_ARCHITECT`, `OPENROUTER_MODEL_VERIFIER`, `OPENROUTER_MODEL_FAST`.
 
 All model output is structured (tool use with JSON schemas) and validated with Zod. **No model ever moves money directly.** Models produce verdicts; a deterministic settlement engine computes amounts; only the settlement service can call PayPal.
 
