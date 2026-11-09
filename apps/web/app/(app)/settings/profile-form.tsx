@@ -4,7 +4,13 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Alert, Button } from "@/components/ui";
 
-type Values = { displayName: string; paypalEmail: string; country: string };
+type Values = {
+  displayName: string;
+  paypalEmail: string;
+  country: string;
+  phoneE164: string;
+  showExactEarnings: boolean;
+};
 
 export function ProfileForm({ initial }: { initial: Values }) {
   const router = useRouter();
@@ -18,6 +24,8 @@ export function ProfileForm({ initial }: { initial: Values }) {
     if (!v.displayName.trim()) e.displayName = "Enter a name.";
     if (v.paypalEmail && !/^\S+@\S+\.\S+$/.test(v.paypalEmail)) e.paypalEmail = "Enter a valid email.";
     if (v.country && !/^[A-Za-z]{2}$/.test(v.country)) e.country = "Use a 2-letter code, e.g. KE.";
+    if (v.phoneE164 && !/^\+[1-9]\d{7,14}$/.test(v.phoneE164))
+      e.phoneE164 = "Use international format, e.g. +254712345678.";
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -46,7 +54,7 @@ export function ProfileForm({ initial }: { initial: Values }) {
   }
 
   const field = (
-    key: keyof Values,
+    key: Exclude<keyof Values, "showExactEarnings">,
     label: string,
     props: React.InputHTMLAttributes<HTMLInputElement> = {},
   ) => (
@@ -76,6 +84,19 @@ export function ProfileForm({ initial }: { initial: Values }) {
         placeholder: "you@example.com",
       })}
       {field("country", "Country (ISO code)", { maxLength: 2, placeholder: "KE", className: "uppercase" })}
+      {field("phoneE164", "WhatsApp number (optional)", {
+        type: "tel",
+        inputMode: "tel",
+        placeholder: "+254712345678",
+      })}
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={v.showExactEarnings}
+          onChange={(e) => setV({ ...v, showExactEarnings: e.target.checked })}
+        />
+        Show exact verified earnings on my public passport (otherwise a range)
+      </label>
       {status === "error" && message ? (
         <Alert tone="danger" title="Not saved">
           {message}

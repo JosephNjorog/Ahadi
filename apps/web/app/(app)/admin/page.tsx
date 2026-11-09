@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getEnv, paypalConfigured } from "@ahadi/core/env";
-import { getAdminOverview } from "@ahadi/services";
+import { getAdminOverview, listReviewQueue, listRiskFlags, recentAgentRuns } from "@ahadi/services";
+import { ResolveRiskButton } from "./resolve-risk-button";
 import { MilestoneStatusBadge } from "@/components/promise/status-badge";
 import { Alert, Badge, Card, CardBody, CardHeader, EmptyState, Stat } from "@/components/ui";
 import { requireAdmin } from "@/lib/auth";
@@ -13,7 +14,13 @@ export const metadata: Metadata = { title: "Admin" };
 export default async function AdminPage() {
   await requireAdmin();
   const env = getEnv();
-  const o = await getAdminOverview();
+  const [o, queue, flags, runs] = await Promise.all([
+    getAdminOverview(),
+    listReviewQueue(),
+    listRiskFlags(50),
+    recentAgentRuns(30),
+  ]);
+  const openFlags = flags.filter((f) => !f.resolvedAt);
   const m = o.money;
 
   return (
@@ -21,8 +28,104 @@ export default async function AdminPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Admin</h1>
         <p className="mt-1 text-sm text-ink-muted">
-          Money map, PayPal state and the Phase 1 manual settlement tools.
+          Money map, review queue, risk flags, PayPal state and agent activity.
         </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Link
+            href="/admin/ledger"
+            className="rounded-lg border border-line bg-surface px-3 py-1.5 text-sm font-medium hover:bg-canvas"
+          >
+            Ledger grid
+          </Link>
+          <Link
+            href="/admin/ops"
+            className="rounded-lg border border-line bg-surface px-3 py-1.5 text-sm font-medium hover:bg-canvas"
+          >
+            Ops Agent
+          </Link>
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card className="overflow-hidden">
+          <CardHeader
+            title="Review queue"
+            description="Milestones waiting for a human, in mediation, or failed to settle"
+          />
+          {queue.length === 0 ? (
+            <CardBody>
+              <p className="text-sm text-ink-muted">Nothing is waiting.</p>
+            </CardBody>
+          ) : (
+            <ul className="divide-y divide-line text-sm">
+              {queue.map((q) => (
+                <li
+                  key={q.milestoneId}
+                  className="flex flex-wrap items-center justify-between gap-2 px-5 py-3"
+                >
+                  <Link
+                    href={
+                      q.state === "MEDIATING" || q.state === "ESCALATED"
+                        ? `/promises/${q.promiseId}/mediation?milestone=${q.milestoneId}`
+                        : q.state === "NEEDS_HUMAN"
+                          ? `/promises/${q.promiseId}/verify?milestone=${q.milestoneId}`
+                          : `/promises/${q.promiseId}`
+                    }
+                    className="min-w-0 font-medium hover:underline"
+                  >
+                    {q.promiseTitle} · {q.title}
+                  </Link>
+                  <span className="flex items-center gap-2">
+                    <span className="tabular">{formatMoney(q.amountMinor, q.currency)}</span>
+                    <MilestoneStatusBadge state={q.state} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+        <Card className="overflow-hidden">
+          <CardHeader
+            title="Risk flags"
+            description={`${openFlags.length} open · HOLD_PAYOUT pauses payouts until resolved`}
+          />
+          {openFlags.length === 0 ? (
+            <CardBody>
+              <p className="text-sm text-ink-muted">No open flags.</p>
+            </CardBody>
+          ) : (
+            <ul className="divide-y divide-line text-sm">
+              {openFlags.map((f) => {
+                const d = f.detail as { detail?: string; summary?: string; reasons?: string[] };
+                return (
+                  <li key={f.id} className="space-y-1 px-5 py-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="flex items-center gap-2">
+                        <Badge
+                          tone={
+                            f.severity === "high" ? "danger" : f.severity === "medium" ? "warn" : "neutral"
+                          }
+                        >
+                          {f.code}
+                        </Badge>
+                        <span className="text-xs text-ink-subtle">
+                          {f.subjectType} {f.subjectId.slice(0, 8)} · {formatDateTime(f.createdAt)}
+                        </span>
+                      </span>
+                      <ResolveRiskButton id={f.id} />
+                    </div>
+                    <p className="text-ink-muted">{d.detail ?? d.summary ?? (d.reasons ?? []).join("; ")}</p>
+                    {f.subjectType === "promise" ? (
+                      <Link href={`/promises/${f.subjectId}`} className="text-xs text-brand-700 underline">
+                        Open promise
+                      </Link>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
       </div>
 
       {!paypalConfigured(env) ? (
@@ -168,6 +271,100 @@ export default async function AdminPage() {
           )}
         </Card>
       </div>
+
+      <Card className="overflow-hidden">
+        <CardHeader
+          title="Agent runs"
+          description="Latest model calls: agent, prompt version, model, tokens and latency (SPEC §24)"
+        />
+        {runs.length === 0 ? (
+          <CardBody>
+            <p className="text-sm text-ink-muted">No model calls yet.</p>
+          </CardBody>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-left text-sm">
+              <thead className="bg-canvas text-xs uppercase tracking-wide text-ink-subtle">
+                <tr>
+                  <th className="px-4 py-2 font-medium">Agent</th>
+                  <th className="px-4 py-2 font-medium">Model</th>
+                  <th className="px-4 py-2 font-medium">Status</th>
+                  <th className="px-4 py-2 font-medium">Tokens in/out</th>
+                  <th className="px-4 py-2 font-medium">Latency</th>
+                  <th className="px-4 py-2 font-medium">When</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {runs.map((r) => (
+                  <tr key={r.id}>
+                    <td className="px-4 py-2">
+                      {r.agent} <span className="text-xs text-ink-subtle">v{r.promptVersion}</span>
+                    </td>
+                    <td className="px-4 py-2 font-mono text-xs">{r.model}</td>
+                    <td className="px-4 py-2">
+                      <Badge tone={r.status === "ok" ? "brand" : "danger"}>{r.status}</Badge>{" "}
+                      {r.attempts > 1 ? <span className="text-xs text-ink-subtle">×{r.attempts}</span> : null}
+                    </td>
+                    <td className="tabular px-4 py-2 text-xs">
+                      {r.inputTokens.toLocaleString()} / {r.outputTokens.toLocaleString()}
+                    </td>
+                    <td className="tabular px-4 py-2 text-xs">{(r.latencyMs / 1000).toFixed(1)}s</td>
+                    <td className="px-4 py-2 text-xs">{formatDateTime(r.createdAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      <Card className="overflow-hidden">
+        <CardHeader
+          title="Agent runs"
+          description="Latest model calls: agent, prompt version, model, tokens and latency (SPEC §24)"
+        />
+        {runs.length === 0 ? (
+          <CardBody>
+            <p className="text-sm text-ink-muted">No model calls yet.</p>
+          </CardBody>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-left text-sm">
+              <thead className="bg-canvas text-xs uppercase tracking-wide text-ink-subtle">
+                <tr>
+                  <th className="px-4 py-2 font-medium">Agent</th>
+                  <th className="px-4 py-2 font-medium">Model</th>
+                  <th className="px-4 py-2 font-medium">Status</th>
+                  <th className="px-4 py-2 font-medium">Tokens in/out</th>
+                  <th className="px-4 py-2 font-medium">Latency</th>
+                  <th className="px-4 py-2 font-medium">When</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {runs.map((r) => (
+                  <tr key={r.id}>
+                    <td className="px-4 py-2">
+                      {r.agent} <span className="text-xs text-ink-subtle">v{r.promptVersion}</span>
+                    </td>
+                    <td className="px-4 py-2 font-mono text-xs">{r.model}</td>
+                    <td className="px-4 py-2">
+                      <Badge tone={r.status === "ok" ? "brand" : "danger"}>{r.status}</Badge>
+                      {r.attempts > 1 ? (
+                        <span className="ml-1 text-xs text-ink-subtle">×{r.attempts}</span>
+                      ) : null}
+                    </td>
+                    <td className="tabular px-4 py-2 text-xs">
+                      {r.inputTokens.toLocaleString()} / {r.outputTokens.toLocaleString()}
+                    </td>
+                    <td className="tabular px-4 py-2 text-xs">{(r.latencyMs / 1000).toFixed(1)}s</td>
+                    <td className="px-4 py-2 text-xs">{formatDateTime(r.createdAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
