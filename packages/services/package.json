@@ -24,7 +24,8 @@
     "@ahadi/agents": "*",
     "@ahadi/verifiers": "*",
     "pdfkit": "^0.17.2",
-    "qrcode": "^1.5.4"
+    "qrcode": "^1.5.4",
+    "@anthropic-ai/sdk": "^1.6.0"
   },
   "devDependencies": {
     "@types/pdfkit": "^0.17.3",
