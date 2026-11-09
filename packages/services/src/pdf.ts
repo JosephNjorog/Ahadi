@@ -1,7 +1,7 @@
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
 import { asc, eq, inArray } from "drizzle-orm";
-import { AppError, bpsToPercent, formatMoney } from "@ahadi/core";
+import { bpsToPercent, formatMoney } from "@ahadi/core";
 import { getEnv } from "@ahadi/core/env";
 import {
   criteria,
