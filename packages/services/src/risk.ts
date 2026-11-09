@@ -216,7 +216,11 @@ export async function scoreRisk(promiseId: string, trigger: "created" | "funded"
       return null;
     });
   }
-  const hold = ruleHold || assessment?.action === "hold_payout";
+  // The Risk Analyst can only escalate a hold when a rule found something of
+  // at least medium severity; low-severity signals alone (e.g. new accounts)
+  // are recorded for review but never pause money on a model's say-so.
+  const aiMayHold = signals.some((s) => s.severity !== "low");
+  const hold = ruleHold || (aiMayHold && assessment?.action === "hold_payout");
   const existing = await db
     .select()
     .from(riskFlags)
