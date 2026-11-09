@@ -20,13 +20,20 @@ export default async function AdminPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Admin</h1>
-        <p className="mt-1 text-sm text-ink-muted">Money map, PayPal state and the Phase 1 manual settlement tools.</p>
+        <p className="mt-1 text-sm text-ink-muted">
+          Money map, PayPal state and the Phase 1 manual settlement tools.
+        </p>
       </div>
 
       {!paypalConfigured(env) ? (
-        <Alert tone="danger" title="PayPal is not configured">Set PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET (see docs/SETUP.md).</Alert>
+        <Alert tone="danger" title="PayPal is not configured">
+          Set PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET (see docs/SETUP.md).
+        </Alert>
       ) : !env.PAYPAL_WEBHOOK_ID ? (
-        <Alert tone="warn" title="PayPal webhook not registered">Run <code>npm run paypal:webhook</code> and set PAYPAL_WEBHOOK_ID. Until then, funding works through the API path only.</Alert>
+        <Alert tone="warn" title="PayPal webhook not registered">
+          Run <code>npm run paypal:webhook</code> and set PAYPAL_WEBHOOK_ID. Until then, funding works through
+          the API path only.
+        </Alert>
       ) : null}
 
       <section aria-label="Money map" className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -70,14 +77,27 @@ export default async function AdminPage() {
                     </td>
                     <td className="tabular px-4 py-2">{formatMoney(f.amountMinor, f.currency)}</td>
                     <td className="px-4 py-2">
-                      <Badge tone={f.status === "AUTHORIZED" || f.status === "REAUTHORIZED" ? "brand" : f.status === "CANCELLED" ? "neutral" : "info"}>{f.status.toLowerCase()}</Badge>
+                      <Badge
+                        tone={
+                          f.status === "AUTHORIZED" || f.status === "REAUTHORIZED"
+                            ? "brand"
+                            : f.status === "CANCELLED"
+                              ? "neutral"
+                              : "info"
+                        }
+                      >
+                        {f.status.toLowerCase()}
+                      </Badge>
                       <div className="mt-0.5 font-mono text-xs text-ink-subtle">{f.paypalOrderId}</div>
                     </td>
                     <td className="px-4 py-2 font-mono text-xs">{f.paypalAuthorizationId ?? "—"}</td>
                     <td className="px-4 py-2 text-xs">{formatDateTime(f.expiresAt)}</td>
                     <td className="px-4 py-2 text-right">
                       {ms.state === "FUNDED" ? (
-                        <Link href={`/admin/milestones/${ms.id}`} className="text-sm font-medium text-brand-700 hover:underline">
+                        <Link
+                          href={`/admin/milestones/${ms.id}`}
+                          className="text-sm font-medium text-brand-700 hover:underline"
+                        >
                           Manual verdict →
                         </Link>
                       ) : null}
@@ -102,11 +122,16 @@ export default async function AdminPage() {
               {o.settlements.map((s) => (
                 <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3">
                   <div>
-                    <Badge tone={s.status === "PAID" ? "brand" : s.status === "FAILED" ? "danger" : "info"}>{s.status.toLowerCase()}</Badge>
-                    <span className="ml-2 font-mono text-xs text-ink-subtle">{s.paypalCaptureId ?? "no capture"}</span>
+                    <Badge tone={s.status === "PAID" ? "brand" : s.status === "FAILED" ? "danger" : "info"}>
+                      {s.status.toLowerCase()}
+                    </Badge>
+                    <span className="ml-2 font-mono text-xs text-ink-subtle">
+                      {s.paypalCaptureId ?? "no capture"}
+                    </span>
                   </div>
                   <span className="tabular">
-                    {formatMoney(s.capturedMinor ?? 0)} <span className="text-ink-subtle">(fee {formatMoney(s.paypalFeeMinor ?? 0)})</span>
+                    {formatMoney(s.capturedMinor ?? 0)}{" "}
+                    <span className="text-ink-subtle">(fee {formatMoney(s.paypalFeeMinor ?? 0)})</span>
                   </span>
                 </li>
               ))}
@@ -125,11 +150,17 @@ export default async function AdminPage() {
                 <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3">
                   <div className="min-w-0">
                     <p className="truncate">{p.recipientPaypalEmail}</p>
-                    <p className="font-mono text-xs text-ink-subtle">{p.paypalPayoutBatchId ?? p.senderBatchId}</p>
+                    <p className="font-mono text-xs text-ink-subtle">
+                      {p.paypalPayoutBatchId ?? p.senderBatchId}
+                    </p>
                   </div>
                   <span className="tabular flex items-center gap-2">
                     {formatMoney(p.amountMinor, p.currency)}
-                    <Badge tone={p.status === "SUCCESS" ? "brand" : p.status === "PENDING" ? "info" : "danger"}>{p.status.toLowerCase()}</Badge>
+                    <Badge
+                      tone={p.status === "SUCCESS" ? "brand" : p.status === "PENDING" ? "info" : "danger"}
+                    >
+                      {p.status.toLowerCase()}
+                    </Badge>
                   </span>
                 </li>
               ))}
@@ -158,7 +189,10 @@ export default async function AdminPage() {
           </CardBody>
         </Card>
         <Card>
-          <CardHeader title="Dead-lettered jobs" description="Jobs that exhausted retries or hit a business-rule error" />
+          <CardHeader
+            title="Dead-lettered jobs"
+            description="Jobs that exhausted retries or hit a business-rule error"
+          />
           <CardBody>
             {o.deadJobs.length === 0 ? (
               <p className="text-sm text-ink-muted">No failed jobs.</p>

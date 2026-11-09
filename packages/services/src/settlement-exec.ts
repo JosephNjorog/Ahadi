@@ -31,7 +31,14 @@ export async function executeSettlement(proposalId: string): Promise<SettlementO
 
   if (ctx.settlement && ["CAPTURED", "VOIDED", "PAID"].includes(ctx.settlement.status)) return "already_done";
   if (milestone.state === "SETTLEMENT_FAILED") {
-    await db.transaction((tx) => applyMilestoneEvent(tx, { milestoneId: milestone.id, event: "SETTLEMENT_RETRIED", actor: SYSTEM, payload: { proposalId } }));
+    await db.transaction((tx) =>
+      applyMilestoneEvent(tx, {
+        milestoneId: milestone.id,
+        event: "SETTLEMENT_RETRIED",
+        actor: SYSTEM,
+        payload: { proposalId },
+      }),
+    );
   } else if (milestone.state !== "SETTLING") {
     throw new AppError("CONFLICT", `Milestone ${milestone.id} is ${milestone.state}, not SETTLING`);
   }
@@ -47,7 +54,11 @@ export async function executeSettlement(proposalId: string): Promise<SettlementO
 
   try {
     if (proposal.captureMinor === 0) {
-      await voidAuthorization(paypal, funding.paypalAuthorizationId, idempotencyKeys.void(funding.paypalAuthorizationId));
+      await voidAuthorization(
+        paypal,
+        funding.paypalAuthorizationId,
+        idempotencyKeys.void(funding.paypalAuthorizationId),
+      );
       await recordVoid(settlement, funding, milestone.id, promise.id, "zero_release");
       return "voided";
     }
@@ -60,7 +71,10 @@ export async function executeSettlement(proposalId: string): Promise<SettlementO
       paypal,
       funding.paypalAuthorizationId,
       {
-        amount: { currency_code: funding.currency, value: toPayPalValue(proposal.captureMinor, funding.currency) },
+        amount: {
+          currency_code: funding.currency,
+          value: toPayPalValue(proposal.captureMinor, funding.currency),
+        },
         finalCapture: true,
         invoiceId: `ahadi-${milestone.id}-a${ctx.submission.attempt}`,
         noteToPayer: isFull
@@ -69,8 +83,13 @@ export async function executeSettlement(proposalId: string): Promise<SettlementO
       },
       idempotencyKeys.capture(proposalId),
     );
-    const outcome = await recordCapture(settlement.id, funding, res.data, { isFull, milestoneId: milestone.id, promiseId: promise.id });
-    if (outcome === "captured" && !isFull) await releaseRemainderIfStillHeld(funding, promise.id, milestone.id);
+    const outcome = await recordCapture(settlement.id, funding, res.data, {
+      isFull,
+      milestoneId: milestone.id,
+      promiseId: promise.id,
+    });
+    if (outcome === "captured" && !isFull)
+      await releaseRemainderIfStillHeld(funding, promise.id, milestone.id);
     return outcome;
   } catch (e) {
     if (e instanceof PayPalError && e.retryable) throw e; // BullMQ backs off and retries with the same idempotency key
@@ -91,7 +110,11 @@ async function ensureSettlementRow(proposalId: string): Promise<Settlement> {
   if (created) return created;
   const [existing] = await db.select().from(settlements).where(eq(settlements.proposalId, proposalId));
   if (existing!.status === "FAILED") {
-    const [reset] = await db.update(settlements).set({ status: "PENDING", error: null }).where(eq(settlements.id, existing!.id)).returning();
+    const [reset] = await db
+      .update(settlements)
+      .set({ status: "PENDING", error: null })
+      .where(eq(settlements.id, existing!.id))
+      .returning();
     return reset!;
   }
   return existing!;
@@ -117,7 +140,11 @@ export async function recordCapture(
 
   if (capture.status === "DECLINED" || capture.status === "FAILED") {
     const [s] = await db.select().from(settlements).where(eq(settlements.id, settlementId));
-    await markFailed(s!.proposalId, ctx.milestoneId, ctx.promiseId, { captureId: capture.id, status: capture.status, reason: capture.status_details?.reason });
+    await markFailed(s!.proposalId, ctx.milestoneId, ctx.promiseId, {
+      captureId: capture.id,
+      status: capture.status,
+      reason: capture.status_details?.reason,
+    });
     return "failed";
   }
 
@@ -177,32 +204,60 @@ async function releaseRemainderIfStillHeld(funding: Funding, promiseId: string, 
     }
   } catch (e) {
     // Non-fatal: final_capture normally releases the remainder already.
-    log.warn({ milestone_id: milestoneId, err: e instanceof PayPalError ? e.toJSON() : String(e) }, "remainder void check failed");
+    log.warn(
+      { milestone_id: milestoneId, err: e instanceof PayPalError ? e.toJSON() : String(e) },
+      "remainder void check failed",
+    );
   }
 }
 
-export async function recordVoid(settlement: Settlement | null, funding: Funding, milestoneId: string, promiseId: string, reason: string) {
+export async function recordVoid(
+  settlement: Settlement | null,
+  funding: Funding,
+  milestoneId: string,
+  promiseId: string,
+  reason: string,
+) {
   const db = getDb();
   await db.transaction(async (tx) => {
-    if (settlement) await tx.update(settlements).set({ status: "VOIDED", capturedMinor: 0 }).where(eq(settlements.id, settlement.id));
+    if (settlement)
+      await tx
+        .update(settlements)
+        .set({ status: "VOIDED", capturedMinor: 0 })
+        .where(eq(settlements.id, settlement.id));
     await tx.update(fundings).set({ status: "VOIDED" }).where(eq(fundings.id, funding.id));
     await applyMilestoneEvent(tx, {
       milestoneId,
       event: "AUTHORIZATION_VOIDED",
       actor: SYSTEM,
-      payload: { authorizationId: funding.paypalAuthorizationId, reason, settlementId: settlement?.id ?? null },
+      payload: {
+        authorizationId: funding.paypalAuthorizationId,
+        reason,
+        settlementId: settlement?.id ?? null,
+      },
     });
   });
   log.info({ promise_id: promiseId, milestone_id: milestoneId, reason }, "authorization voided");
 }
 
-async function markFailed(proposalId: string, milestoneId: string, promiseId: string, error: Record<string, unknown>) {
+async function markFailed(
+  proposalId: string,
+  milestoneId: string,
+  promiseId: string,
+  error: Record<string, unknown>,
+) {
   const db = getDb();
   await db.transaction(async (tx) => {
     const [existing] = await tx.select().from(settlements).where(eq(settlements.proposalId, proposalId));
-    if (existing) await tx.update(settlements).set({ status: "FAILED", error }).where(eq(settlements.id, existing.id));
+    if (existing)
+      await tx.update(settlements).set({ status: "FAILED", error }).where(eq(settlements.id, existing.id));
     else await tx.insert(settlements).values({ proposalId, status: "FAILED", error });
-    await applyMilestoneEvent(tx, { milestoneId, event: "SETTLEMENT_FAILED", actor: SYSTEM, payload: { proposalId, error } });
+    await applyMilestoneEvent(tx, {
+      milestoneId,
+      event: "SETTLEMENT_FAILED",
+      actor: SYSTEM,
+      payload: { proposalId, error },
+    });
   });
   void promiseId;
 }

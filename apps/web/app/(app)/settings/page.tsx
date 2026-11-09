@@ -14,9 +14,18 @@ export default async function SettingsPage() {
         <p className="mt-1 text-sm text-ink-muted">Signed in as {user.email}</p>
       </div>
       <Card>
-        <CardHeader title="Profile and payouts" description="Payouts are sent to this PayPal email. In the sandbox, use a sandbox personal account." />
+        <CardHeader
+          title="Profile and payouts"
+          description="Payouts are sent to this PayPal email. In the sandbox, use a sandbox personal account."
+        />
         <CardBody>
-          <ProfileForm initial={{ displayName: user.displayName, paypalEmail: user.paypalEmail ?? "", country: user.country ?? "" }} />
+          <ProfileForm
+            initial={{
+              displayName: user.displayName,
+              paypalEmail: user.paypalEmail ?? "",
+              country: user.country ?? "",
+            }}
+          />
         </CardBody>
       </Card>
     </div>

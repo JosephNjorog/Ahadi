@@ -19,7 +19,8 @@ export async function runMigrations(url?: string) {
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
-  const host = new URL(process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL || "postgres://x").hostname;
+  const host = new URL(process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL || "postgres://x")
+    .hostname;
   console.log(`Running migrations against ${host} …`);
   runMigrations()
     .then(() => console.log("Migrations complete."))

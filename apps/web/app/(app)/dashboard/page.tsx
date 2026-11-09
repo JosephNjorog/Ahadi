@@ -20,7 +20,9 @@ export default async function Dashboard() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Your promises</h1>
-          <p className="mt-1 text-sm text-ink-muted">Every job is a promise: signed criteria, PayPal-secured funds, verified release.</p>
+          <p className="mt-1 text-sm text-ink-muted">
+            Every job is a promise: signed criteria, PayPal-secured funds, verified release.
+          </p>
         </div>
         <span title="AI contract builder arrives in Phase 2">
           <ButtonLink href="#" variant="secondary" className="pointer-events-none opacity-60">
@@ -46,22 +48,36 @@ export default async function Dashboard() {
 
       {promises.length === 0 ? (
         <EmptyState title="No promises yet" icon={<span className="text-3xl">🤝</span>}>
-          When someone invites you to a promise, or you create one, it shows up here. In the demo, run <code className="rounded bg-canvas px-1">npm run db:seed</code> and sign in as the client.
+          When someone invites you to a promise, or you create one, it shows up here. In the demo, run{" "}
+          <code className="rounded bg-canvas px-1">npm run db:seed</code> and sign in as the client.
         </EmptyState>
       ) : (
         <Card className="overflow-hidden">
           <ul className="divide-y divide-line">
             {promises.map((p) => (
               <li key={p.id}>
-                <Link href={`/promises/${p.id}`} className="flex flex-col gap-3 px-5 py-4 hover:bg-canvas sm:flex-row sm:items-center">
+                <Link
+                  href={`/promises/${p.id}`}
+                  className="flex flex-col gap-3 px-5 py-4 hover:bg-canvas sm:flex-row sm:items-center"
+                >
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="truncate font-medium text-ink">{p.title}</p>
                       <PromiseStatusBadge state={p.state} />
-                      {p.role ? <Badge tone="neutral">{p.role === "client" ? "You're the client" : "You're the worker"}</Badge> : <Badge tone="info">Admin view</Badge>}
+                      {p.role ? (
+                        <Badge tone="neutral">
+                          {p.role === "client" ? "You're the client" : "You're the worker"}
+                        </Badge>
+                      ) : (
+                        <Badge tone="info">Admin view</Badge>
+                      )}
                     </div>
                     <p className="mt-1 text-sm text-ink-muted">
-                      {p.category} · {p.role === "client" ? `Worker: ${p.worker?.displayName ?? "invited"}` : `Client: ${p.client?.displayName ?? "—"}`} · created {formatDate(p.createdAt)}
+                      {p.category} ·{" "}
+                      {p.role === "client"
+                        ? `Worker: ${p.worker?.displayName ?? "invited"}`
+                        : `Client: ${p.client?.displayName ?? "—"}`}{" "}
+                      · created {formatDate(p.createdAt)}
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {p.milestones.map((m) => (
@@ -73,7 +89,9 @@ export default async function Dashboard() {
                   </div>
                   <div className="text-left sm:text-right">
                     <p className="tabular text-lg font-semibold">{formatMoney(p.totalMinor, p.currency)}</p>
-                    {p.heldMinor > 0 ? <p className="text-xs text-brand-700">{formatMoney(p.heldMinor, p.currency)} secured</p> : null}
+                    {p.heldMinor > 0 ? (
+                      <p className="text-xs text-brand-700">{formatMoney(p.heldMinor, p.currency)} secured</p>
+                    ) : null}
                   </div>
                 </Link>
               </li>

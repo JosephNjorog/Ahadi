@@ -23,7 +23,10 @@ export const VALIDITY_PERIOD_MS = 29 * 24 * 3600 * 1000;
 
 export const LIVE_FUNDING_STATUSES = ["AUTHORIZED", "REAUTHORIZED"] as const;
 
-export async function getLiveFunding(db: Tx | ReturnType<typeof getDb>, milestoneId: string): Promise<Funding | undefined> {
+export async function getLiveFunding(
+  db: Tx | ReturnType<typeof getDb>,
+  milestoneId: string,
+): Promise<Funding | undefined> {
   const [f] = await db
     .select()
     .from(fundings)
@@ -37,7 +40,10 @@ export async function getLiveFunding(db: Tx | ReturnType<typeof getDb>, mileston
  * POST /api/milestones/:id/order — create a PayPal order (intent AUTHORIZE) for the milestone amount.
  * Only the client may fund; terms must be agreed; the milestone must be unfunded.
  */
-export async function createMilestoneOrder(actor: Actor, milestoneId: string): Promise<{ orderId: string; fundingId: string }> {
+export async function createMilestoneOrder(
+  actor: Actor,
+  milestoneId: string,
+): Promise<{ orderId: string; fundingId: string }> {
   const db = getDb();
   const env = getEnv();
 
@@ -65,7 +71,10 @@ export async function createMilestoneOrder(actor: Actor, milestoneId: string): P
       customId: `${promise.id}:${milestone.id}`,
       invoiceId: `ahadi-${milestone.id}-f${attempt}`,
       description: `Ahadi milestone: ${milestone.title}`,
-      amount: { currency_code: promise.currency, value: toPayPalValue(milestone.amountMinor, promise.currency) },
+      amount: {
+        currency_code: promise.currency,
+        value: toPayPalValue(milestone.amountMinor, promise.currency),
+      },
       returnUrl: `${base}/promises/${promise.id}/fund?milestone=${milestone.id}&paypal=return`,
       cancelUrl: `${base}/promises/${promise.id}/fund?milestone=${milestone.id}&paypal=cancel`,
     },
@@ -91,17 +100,26 @@ export async function createMilestoneOrder(actor: Actor, milestoneId: string): P
       })
       .onConflictDoNothing({ target: fundings.paypalOrderId })
       .returning();
-    const funding = f ?? (await tx.select().from(fundings).where(eq(fundings.paypalOrderId, order.data.id)))[0]!;
+    const funding =
+      f ?? (await tx.select().from(fundings).where(eq(fundings.paypalOrderId, order.data.id)))[0]!;
     await applyMilestoneEvent(tx, {
       milestoneId: milestone.id,
       event: "ORDER_CREATED",
       actor,
-      payload: { orderId: order.data.id, amountMinor: milestone.amountMinor, currency: promise.currency, attempt },
+      payload: {
+        orderId: order.data.id,
+        amountMinor: milestone.amountMinor,
+        currency: promise.currency,
+        attempt,
+      },
     });
     return funding.id;
   });
 
-  log.info({ promise_id: promise.id, milestone_id: milestone.id, order_id: order.data.id, attempt }, "funding order created");
+  log.info(
+    { promise_id: promise.id, milestone_id: milestone.id, order_id: order.data.id, attempt },
+    "funding order created",
+  );
   return { orderId: order.data.id, fundingId };
 }
 
@@ -109,10 +127,15 @@ export async function createMilestoneOrder(actor: Actor, milestoneId: string): P
  * POST /api/milestones/:id/authorize — after the buyer approves in the PayPal popup.
  * Idempotent: authorizing an already-authorized order returns the existing funding.
  */
-export async function authorizeMilestoneOrder(actor: Actor, milestoneId: string, orderId: string): Promise<Funding> {
+export async function authorizeMilestoneOrder(
+  actor: Actor,
+  milestoneId: string,
+  orderId: string,
+): Promise<Funding> {
   const db = getDb();
   const [funding] = await db.select().from(fundings).where(eq(fundings.paypalOrderId, orderId));
-  if (!funding || funding.milestoneId !== milestoneId) throw new AppError("NOT_FOUND", "Order not found for this milestone");
+  if (!funding || funding.milestoneId !== milestoneId)
+    throw new AppError("NOT_FOUND", "Order not found for this milestone");
   const [promise] = await db
     .select()
     .from(promises)
@@ -120,7 +143,8 @@ export async function authorizeMilestoneOrder(actor: Actor, milestoneId: string,
     .where(eq(milestones.id, milestoneId));
   assertParty(actor, promise!.promises, "client");
   if (funding.status === "AUTHORIZED" || funding.status === "REAUTHORIZED") return funding;
-  if (funding.status === "CANCELLED") throw new AppError("CONFLICT", "This checkout was replaced by a newer one. Please try again.");
+  if (funding.status === "CANCELLED")
+    throw new AppError("CONFLICT", "This checkout was replaced by a newer one. Please try again.");
 
   let authorization: Authorization | undefined;
   let rawOrder: unknown;
@@ -138,7 +162,8 @@ export async function authorizeMilestoneOrder(actor: Actor, milestoneId: string,
       throw e;
     }
   }
-  if (!authorization) throw new AppError("PAYPAL_ERROR", "PayPal did not return an authorization for this order");
+  if (!authorization)
+    throw new AppError("PAYPAL_ERROR", "PayPal did not return an authorization for this order");
 
   return recordAuthorization({ milestoneId, orderId, authorization, rawOrder, actor, source: "api" });
 }
@@ -159,7 +184,11 @@ export async function recordAuthorization(args: {
   const db = getDb();
   return db.transaction(async (tx) => {
     const { milestone, promise } = await lockMilestone(tx, milestoneId);
-    const [funding] = await tx.select().from(fundings).where(eq(fundings.paypalOrderId, orderId)).for("update");
+    const [funding] = await tx
+      .select()
+      .from(fundings)
+      .where(eq(fundings.paypalOrderId, orderId))
+      .for("update");
     if (!funding) throw new AppError("NOT_FOUND", "Funding not found");
     if (funding.status === "AUTHORIZED" || funding.status === "REAUTHORIZED") return funding;
 
@@ -180,14 +209,22 @@ export async function recordAuthorization(args: {
       // e.g. eCheck or review: not secured yet; the webhook will move it forward.
       const [f] = await tx
         .update(fundings)
-        .set({ status: "APPROVED", paypalAuthorizationId: authorization.id, raw: { order: args.rawOrder, authorization } })
+        .set({
+          status: "APPROVED",
+          paypalAuthorizationId: authorization.id,
+          raw: { order: args.rawOrder, authorization },
+        })
         .where(eq(fundings.id, funding.id))
         .returning();
       await appendLedgerEvent(tx, {
         promiseId: promise.id,
         type: "funding.pending",
         actor: actorTag(actor),
-        payload: { milestoneId, authorizationId: authorization.id, reason: authorization.status_details?.reason ?? null },
+        payload: {
+          milestoneId,
+          authorizationId: authorization.id,
+          reason: authorization.status_details?.reason ?? null,
+        },
       });
       return f!;
     }
@@ -203,8 +240,12 @@ export async function recordAuthorization(args: {
         honorExpiresAt: new Date(created.getTime() + HONOR_PERIOD_MS),
         expiresAt,
         raw: { order: args.rawOrder ?? null, authorization },
-        payerEmail: (args.rawOrder as { payer?: { email_address?: string } } | undefined)?.payer?.email_address ?? funding.payerEmail,
-        payerId: (args.rawOrder as { payer?: { payer_id?: string } } | undefined)?.payer?.payer_id ?? funding.payerId,
+        payerEmail:
+          (args.rawOrder as { payer?: { email_address?: string } } | undefined)?.payer?.email_address ??
+          funding.payerEmail,
+        payerId:
+          (args.rawOrder as { payer?: { payer_id?: string } } | undefined)?.payer?.payer_id ??
+          funding.payerId,
       })
       .where(eq(fundings.id, funding.id))
       .returning();
@@ -224,13 +265,25 @@ export async function recordAuthorization(args: {
         },
       });
     }
-    log.info({ promise_id: promise.id, milestone_id: milestoneId, authorization_id: authorization.id, source: args.source }, "funds secured");
+    log.info(
+      {
+        promise_id: promise.id,
+        milestone_id: milestoneId,
+        authorization_id: authorization.id,
+        source: args.source,
+      },
+      "funds secured",
+    );
     return updated!;
   });
 }
 
 /** Buyer closed the popup or PayPal redirected to cancel_url. */
-export async function cancelMilestoneFunding(actor: Actor, milestoneId: string, orderId: string): Promise<void> {
+export async function cancelMilestoneFunding(
+  actor: Actor,
+  milestoneId: string,
+  orderId: string,
+): Promise<void> {
   const db = getDb();
   await db.transaction(async (tx) => {
     const { milestone, promise } = await lockMilestone(tx, milestoneId);

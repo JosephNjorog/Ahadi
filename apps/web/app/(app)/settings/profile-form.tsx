@@ -26,13 +26,18 @@ export function ProfileForm({ initial }: { initial: Values }) {
     ev.preventDefault();
     if (!validate()) return;
     setStatus("saving");
-    const res = await fetch("/api/me", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(v) });
+    const res = await fetch("/api/me", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(v),
+    });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
       setStatus("error");
       setMessage(body?.error?.message ?? "Couldn't save");
       const fe = body?.error?.details as Record<string, string[]> | undefined;
-      if (fe) setErrors(Object.fromEntries(Object.entries(fe).map(([k, msgs]) => [k, msgs[0]])) as typeof errors);
+      if (fe)
+        setErrors(Object.fromEntries(Object.entries(fe).map(([k, msgs]) => [k, msgs[0]])) as typeof errors);
       return;
     }
     setStatus("saved");
@@ -40,7 +45,11 @@ export function ProfileForm({ initial }: { initial: Values }) {
     router.refresh();
   }
 
-  const field = (key: keyof Values, label: string, props: React.InputHTMLAttributes<HTMLInputElement> = {}) => (
+  const field = (
+    key: keyof Values,
+    label: string,
+    props: React.InputHTMLAttributes<HTMLInputElement> = {},
+  ) => (
     <label className="block">
       <span className="text-sm font-medium">{label}</span>
       <input
@@ -60,9 +69,18 @@ export function ProfileForm({ initial }: { initial: Values }) {
   return (
     <form onSubmit={save} className="space-y-4" noValidate>
       {field("displayName", "Display name", { autoComplete: "name", maxLength: 80 })}
-      {field("paypalEmail", "PayPal email for payouts", { type: "email", autoComplete: "email", inputMode: "email", placeholder: "you@example.com" })}
+      {field("paypalEmail", "PayPal email for payouts", {
+        type: "email",
+        autoComplete: "email",
+        inputMode: "email",
+        placeholder: "you@example.com",
+      })}
       {field("country", "Country (ISO code)", { maxLength: 2, placeholder: "KE", className: "uppercase" })}
-      {status === "error" && message ? <Alert tone="danger" title="Not saved">{message}</Alert> : null}
+      {status === "error" && message ? (
+        <Alert tone="danger" title="Not saved">
+          {message}
+        </Alert>
+      ) : null}
       <div className="flex items-center gap-3">
         <Button type="submit" loading={status === "saving"}>
           Save

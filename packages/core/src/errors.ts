@@ -40,7 +40,11 @@ export class AppError extends Error {
 
 export class IllegalTransitionError extends AppError {
   constructor(machine: string, from: string, event: string) {
-    super("ILLEGAL_TRANSITION", `${machine}: cannot apply ${event} in state ${from}`, { machine, from, event });
+    super("ILLEGAL_TRANSITION", `${machine}: cannot apply ${event} in state ${from}`, {
+      machine,
+      from,
+      event,
+    });
     this.name = "IllegalTransitionError";
   }
 }

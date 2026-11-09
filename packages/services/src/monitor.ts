@@ -27,7 +27,14 @@ export interface MonitorReport {
  */
 export async function monitorAuthorizations(now = new Date()): Promise<MonitorReport> {
   const db = getDb();
-  const report: MonitorReport = { checked: 0, reauthorized: 0, reauthFailed: 0, expiringWarned: 0, expired: 0, synced: 0 };
+  const report: MonitorReport = {
+    checked: 0,
+    reauthorized: 0,
+    reauthFailed: 0,
+    expiringWarned: 0,
+    expired: 0,
+    synced: 0,
+  };
   const rows = await db
     .select({ f: fundings, m: milestones })
     .from(fundings)
@@ -45,9 +52,23 @@ export async function monitorAuthorizations(now = new Date()): Promise<MonitorRe
         await db.transaction(async (tx) => {
           await tx.update(fundings).set({ status: "EXPIRED" }).where(eq(fundings.id, f.id));
           if (m.state === "FUNDED") {
-            await applyMilestoneEvent(tx, { milestoneId: m.id, event: "AUTHORIZATION_EXPIRED", actor: SYSTEM, payload: { authorizationId: f.paypalAuthorizationId } });
+            await applyMilestoneEvent(tx, {
+              milestoneId: m.id,
+              event: "AUTHORIZATION_EXPIRED",
+              actor: SYSTEM,
+              payload: { authorizationId: f.paypalAuthorizationId },
+            });
           } else {
-            await appendLedgerEvent(tx, { promiseId: m.promiseId, type: "funding.expired", actor: "system", payload: { milestoneId: m.id, milestoneState: m.state, authorizationId: f.paypalAuthorizationId } });
+            await appendLedgerEvent(tx, {
+              promiseId: m.promiseId,
+              type: "funding.expired",
+              actor: "system",
+              payload: {
+                milestoneId: m.id,
+                milestoneState: m.state,
+                authorizationId: f.paypalAuthorizationId,
+              },
+            });
           }
         });
         report.expired++;
@@ -55,7 +76,10 @@ export async function monitorAuthorizations(now = new Date()): Promise<MonitorRe
         continue;
       }
       if (auth.status === "VOIDED" || auth.status === "CAPTURED") {
-        await db.update(fundings).set({ status: auth.status === "VOIDED" ? "VOIDED" : "CAPTURED" }).where(eq(fundings.id, f.id));
+        await db
+          .update(fundings)
+          .set({ status: auth.status === "VOIDED" ? "VOIDED" : "CAPTURED" })
+          .where(eq(fundings.id, f.id));
         report.synced++;
         continue;
       }
@@ -84,7 +108,12 @@ export async function monitorAuthorizations(now = new Date()): Promise<MonitorRe
               promiseId: m.promiseId,
               type: "funding.reauthorized",
               actor: "system",
-              payload: { milestoneId: m.id, previousAuthorizationId: f.paypalAuthorizationId, authorizationId: re.id, expiresAt: re.expiration_time ?? null },
+              payload: {
+                milestoneId: m.id,
+                previousAuthorizationId: f.paypalAuthorizationId,
+                authorizationId: re.id,
+                expiresAt: re.expiration_time ?? null,
+              },
             });
           });
           report.reauthorized++;
@@ -93,32 +122,50 @@ export async function monitorAuthorizations(now = new Date()): Promise<MonitorRe
           await warnOnce(m.promiseId, m.id, "funding.reauthorize_failed", {
             authorizationId: f.paypalAuthorizationId,
             message: "Your hold needs refreshing.",
-            error: e instanceof PayPalError ? { name: e.paypalName, issue: e.issue, debugId: e.debugId } : String(e),
+            error:
+              e instanceof PayPalError
+                ? { name: e.paypalName, issue: e.issue, debugId: e.debugId }
+                : String(e),
           });
           log.warn({ ...ctx, err: e instanceof PayPalError ? e.toJSON() : String(e) }, "reauthorize failed");
         }
       }
 
       if (f.expiresAt && f.expiresAt.getTime() - now.getTime() <= WARN_BEFORE_EXPIRY_MS) {
-        if (await warnOnce(m.promiseId, m.id, "funding.expiring_soon", { authorizationId: f.paypalAuthorizationId, expiresAt: f.expiresAt.toISOString() })) {
+        if (
+          await warnOnce(m.promiseId, m.id, "funding.expiring_soon", {
+            authorizationId: f.paypalAuthorizationId,
+            expiresAt: f.expiresAt.toISOString(),
+          })
+        ) {
           report.expiringWarned++;
         }
       }
     } catch (e) {
-      log.error({ ...ctx, err: e instanceof PayPalError ? e.toJSON() : String(e) }, "authorization monitor check failed");
+      log.error(
+        { ...ctx, err: e instanceof PayPalError ? e.toJSON() : String(e) },
+        "authorization monitor check failed",
+      );
     }
   }
   return report;
 }
 
 /** Append a warning ledger event only once per authorization. */
-async function warnOnce(promiseId: string, milestoneId: string, type: string, payload: Record<string, unknown>): Promise<boolean> {
+async function warnOnce(
+  promiseId: string,
+  milestoneId: string,
+  type: string,
+  payload: Record<string, unknown>,
+): Promise<boolean> {
   const db = getDb();
   const existing = await db
     .select({ payload: ledgerEvents.payload })
     .from(ledgerEvents)
     .where(and(eq(ledgerEvents.promiseId, promiseId), eq(ledgerEvents.type, type)));
   if (existing.some((e) => e.payload.authorizationId === payload.authorizationId)) return false;
-  await db.transaction((tx) => appendLedgerEvent(tx, { promiseId, type, actor: "system", payload: { milestoneId, ...payload } }));
+  await db.transaction((tx) =>
+    appendLedgerEvent(tx, { promiseId, type, actor: "system", payload: { milestoneId, ...payload } }),
+  );
   return true;
 }

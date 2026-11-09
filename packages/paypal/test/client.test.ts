@@ -35,7 +35,14 @@ function json(body: unknown, status = 200, headers: Record<string, string> = {})
 }
 
 const client = (f: typeof fetch) =>
-  new PayPalClient({ clientId: "id", clientSecret: "secret", env: "sandbox", fetch: f, logger: silent, backoffMs: 1 });
+  new PayPalClient({
+    clientId: "id",
+    clientSecret: "secret",
+    env: "sandbox",
+    fetch: f,
+    logger: silent,
+    backoffMs: 1,
+  });
 
 const header = (c: Call, name: string) => new Headers(c.init.headers).get(name);
 
@@ -70,7 +77,11 @@ describe("PayPalClient", () => {
   it("caches the OAuth token across calls", async () => {
     const m = mockFetch(() => json({ id: "O", status: "CREATED" }));
     const c = client(m.fn);
-    await Promise.all([authorizeOrder(c, "O1", "k1"), authorizeOrder(c, "O2", "k2"), authorizeOrder(c, "O3", "k3")]);
+    await Promise.all([
+      authorizeOrder(c, "O1", "k1"),
+      authorizeOrder(c, "O2", "k2"),
+      authorizeOrder(c, "O3", "k3"),
+    ]);
     expect(m.calls.filter((x) => x.url.endsWith("/oauth2/token"))).toHaveLength(1);
   });
 
@@ -79,34 +90,54 @@ describe("PayPalClient", () => {
       id: "O",
       status: "COMPLETED",
       intent: "AUTHORIZE",
-      purchase_units: [{ amount: { currency_code: "USD", value: "1.00" }, payments: { authorizations: [{ id: "AUTH1", status: "CREATED", amount: { currency_code: "USD", value: "1.00" } }] } }],
+      purchase_units: [
+        {
+          amount: { currency_code: "USD", value: "1.00" },
+          payments: {
+            authorizations: [
+              { id: "AUTH1", status: "CREATED", amount: { currency_code: "USD", value: "1.00" } },
+            ],
+          },
+        },
+      ],
     });
     expect(auth?.id).toBe("AUTH1");
   });
 
   it("sends partial final capture", async () => {
     const m = mockFetch(() =>
-      json({
-        id: "CAP1",
-        status: "COMPLETED",
-        amount: { currency_code: "USD", value: "300.00" },
-        seller_receivable_breakdown: {
-          gross_amount: { currency_code: "USD", value: "300.00" },
-          paypal_fee: { currency_code: "USD", value: "10.80" },
-          net_amount: { currency_code: "USD", value: "289.20" },
+      json(
+        {
+          id: "CAP1",
+          status: "COMPLETED",
+          amount: { currency_code: "USD", value: "300.00" },
+          seller_receivable_breakdown: {
+            gross_amount: { currency_code: "USD", value: "300.00" },
+            paypal_fee: { currency_code: "USD", value: "10.80" },
+            net_amount: { currency_code: "USD", value: "289.20" },
+          },
         },
-      }, 201),
+        201,
+      ),
     );
     const res = await captureAuthorization(
       client(m.fn),
       "AUTH1",
-      { amount: { currency_code: "USD", value: "300.00" }, finalCapture: true, invoiceId: "inv-1", noteToPayer: "75% released" },
+      {
+        amount: { currency_code: "USD", value: "300.00" },
+        finalCapture: true,
+        invoiceId: "inv-1",
+        noteToPayer: "75% released",
+      },
       "ahadi:capture:p1",
     );
     expect(res.data.seller_receivable_breakdown?.net_amount?.value).toBe("289.20");
     const call = m.calls.at(-1)!;
     expect(call.url).toContain("/v2/payments/authorizations/AUTH1/capture");
-    expect(JSON.parse(String(call.init.body))).toMatchObject({ final_capture: true, amount: { value: "300.00" } });
+    expect(JSON.parse(String(call.init.body))).toMatchObject({
+      final_capture: true,
+      amount: { value: "300.00" },
+    });
     expect(header(call, "PayPal-Request-Id")).toBe("ahadi:capture:p1");
   });
 
@@ -128,7 +159,12 @@ describe("PayPalClient", () => {
         422,
       ),
     );
-    const err = await captureAuthorization(client(m.fn), "A", { amount: { currency_code: "USD", value: "1.00" }, finalCapture: true }, "k").catch((e) => e);
+    const err = await captureAuthorization(
+      client(m.fn),
+      "A",
+      { amount: { currency_code: "USD", value: "1.00" }, finalCapture: true },
+      "k",
+    ).catch((e) => e);
     expect(err).toBeInstanceOf(PayPalError);
     expect(err.status).toBe(422);
     expect(err.retryable).toBe(false);
@@ -138,7 +174,11 @@ describe("PayPalClient", () => {
   });
 
   it("retries 5xx with the same idempotency key, then succeeds", async () => {
-    const m = mockFetch((_c, n) => (n < 3 ? json({ name: "INTERNAL_SERVER_ERROR", message: "x" }, 503) : json({ id: "O", status: "CREATED" })));
+    const m = mockFetch((_c, n) =>
+      n < 3
+        ? json({ name: "INTERNAL_SERVER_ERROR", message: "x" }, 503)
+        : json({ id: "O", status: "CREATED" }),
+    );
     const res = await authorizeOrder(client(m.fn), "O", "ahadi:auth:O");
     expect(res.data.id).toBe("O");
     const writes = m.calls.filter((c) => !c.url.endsWith("token"));
@@ -147,13 +187,17 @@ describe("PayPalClient", () => {
   });
 
   it("refreshes the token once on 401", async () => {
-    const m = mockFetch((_c, n) => (n === 1 ? json({ name: "AUTHENTICATION_FAILURE" }, 401) : json({ id: "O", status: "CREATED" })));
+    const m = mockFetch((_c, n) =>
+      n === 1 ? json({ name: "AUTHENTICATION_FAILURE" }, 401) : json({ id: "O", status: "CREATED" }),
+    );
     await authorizeOrder(client(m.fn), "O", "k");
     expect(m.calls.filter((c) => c.url.endsWith("token"))).toHaveLength(2);
   });
 
   it("raises a clear auth error for bad credentials", async () => {
-    const f = vi.fn(async () => json({ error: "invalid_client", error_description: "Client Authentication failed" }, 401));
+    const f = vi.fn(async () =>
+      json({ error: "invalid_client", error_description: "Client Authentication failed" }, 401),
+    );
     const err = await authorizeOrder(client(f as unknown as typeof fetch), "O", "k").catch((e) => e);
     expect(err).toBeInstanceOf(PayPalError);
     expect(err.operation).toBe("oauth.token");
@@ -161,16 +205,38 @@ describe("PayPalClient", () => {
   });
 
   it("creates payout batches keyed on sender_batch_id", async () => {
-    const m = mockFetch(() => json({ batch_header: { payout_batch_id: "PB1", batch_status: "PENDING", sender_batch_header: { sender_batch_id: "ahadi_po_x" } } }, 201));
+    const m = mockFetch(() =>
+      json(
+        {
+          batch_header: {
+            payout_batch_id: "PB1",
+            batch_status: "PENDING",
+            sender_batch_header: { sender_batch_id: "ahadi_po_x" },
+          },
+        },
+        201,
+      ),
+    );
     await createPayoutBatch(client(m.fn), {
       senderBatchId: "ahadi_po_x",
       emailSubject: "s",
       emailMessage: "m",
-      items: [{ receiverEmail: "w@x.test", amount: { value: "286.53", currency: "USD" }, note: "n", senderItemId: "ahadi_po_x_0" }],
+      items: [
+        {
+          receiverEmail: "w@x.test",
+          amount: { value: "286.53", currency: "USD" },
+          note: "n",
+          senderItemId: "ahadi_po_x_0",
+        },
+      ],
     });
     const body = JSON.parse(String(m.calls.at(-1)!.init.body));
     expect(body.sender_batch_header.sender_batch_id).toBe("ahadi_po_x");
-    expect(body.items[0]).toMatchObject({ recipient_type: "EMAIL", receiver: "w@x.test", sender_item_id: "ahadi_po_x_0" });
+    expect(body.items[0]).toMatchObject({
+      recipient_type: "EMAIL",
+      receiver: "w@x.test",
+      sender_item_id: "ahadi_po_x_0",
+    });
   });
 });
 
@@ -185,7 +251,8 @@ describe("verifyWebhookSignature", () => {
 
   it("embeds the raw body verbatim and returns true on SUCCESS", async () => {
     const m = mockFetch(() => json({ verification_status: "SUCCESS" }));
-    const raw = '{"id":"WH-1","event_type":"PAYMENT.AUTHORIZATION.CREATED","resource":{"amount":{"value":"400.00"}},"summary":"caf\\u00e9"}';
+    const raw =
+      '{"id":"WH-1","event_type":"PAYMENT.AUTHORIZATION.CREATED","resource":{"amount":{"value":"400.00"}},"summary":"caf\\u00e9"}';
     const ok = await verifyWebhookSignature(client(m.fn), { headers, rawBody: raw, webhookId: "WHID" });
     expect(ok).toBe(true);
     const sent = String(m.calls.at(-1)!.init.body);
@@ -195,7 +262,15 @@ describe("verifyWebhookSignature", () => {
 
   it("returns false on FAILURE and without headers", async () => {
     const m = mockFetch(() => json({ verification_status: "FAILURE" }));
-    expect(await verifyWebhookSignature(client(m.fn), { headers, rawBody: "{}", webhookId: "W" })).toBe(false);
-    expect(await verifyWebhookSignature(client(m.fn), { headers: { ...headers, transmissionSig: null }, rawBody: "{}", webhookId: "W" })).toBe(false);
+    expect(await verifyWebhookSignature(client(m.fn), { headers, rawBody: "{}", webhookId: "W" })).toBe(
+      false,
+    );
+    expect(
+      await verifyWebhookSignature(client(m.fn), {
+        headers: { ...headers, transmissionSig: null },
+        rawBody: "{}",
+        webhookId: "W",
+      }),
+    ).toBe(false);
   });
 });

@@ -27,5 +27,8 @@ export async function GET() {
   checks.paypal = paypalConfigured(env) ? "ok" : "not_configured";
   checks.paypalWebhook = env.PAYPAL_WEBHOOK_ID ? "ok" : "not_configured";
   const healthy = checks.database === "ok" && checks.queue === "ok";
-  return NextResponse.json({ status: healthy ? "ok" : "degraded", paypalEnv: env.PAYPAL_ENV, checks }, { status: healthy ? 200 : 503 });
+  return NextResponse.json(
+    { status: healthy ? "ok" : "degraded", paypalEnv: env.PAYPAL_ENV, checks },
+    { status: healthy ? 200 : 503 },
+  );
 }

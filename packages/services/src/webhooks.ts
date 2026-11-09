@@ -21,15 +21,23 @@ import { applyPayoutItemUpdate, reconcilePayouts } from "./payouts";
 import { getPayPal } from "./paypal";
 import { recordCapture, recordVoid } from "./settlement-exec";
 
-type Related = { supplementary_data?: { related_ids?: { order_id?: string; authorization_id?: string; capture_id?: string } } };
+type Related = {
+  supplementary_data?: {
+    related_ids?: { order_id?: string; authorization_id?: string; capture_id?: string };
+  };
+};
 
 /**
  * POST /api/webhooks/paypal: verify the signature, store keyed by event id (duplicates ignored),
  * enqueue processing and return fast. PayPal webhooks are the source of truth (SPEC §0 principle 6).
  */
-export async function ingestPayPalWebhook(rawBody: string, headers: WebhookSignatureHeaders): Promise<{ status: "queued" | "duplicate" }> {
+export async function ingestPayPalWebhook(
+  rawBody: string,
+  headers: WebhookSignatureHeaders,
+): Promise<{ status: "queued" | "duplicate" }> {
   const env = getEnv();
-  if (!env.PAYPAL_WEBHOOK_ID) throw new AppError("CONFIG_MISSING", "PAYPAL_WEBHOOK_ID is not set — run npm run paypal:webhook");
+  if (!env.PAYPAL_WEBHOOK_ID)
+    throw new AppError("CONFIG_MISSING", "PAYPAL_WEBHOOK_ID is not set — run npm run paypal:webhook");
   let event: WebhookEvent;
   try {
     event = JSON.parse(rawBody) as WebhookEvent;
@@ -38,7 +46,11 @@ export async function ingestPayPalWebhook(rawBody: string, headers: WebhookSigna
   }
   if (!event.id || !event.event_type) throw new AppError("VALIDATION_FAILED", "Not a PayPal webhook event");
 
-  const verified = await verifyWebhookSignature(getPayPal(), { headers, rawBody, webhookId: env.PAYPAL_WEBHOOK_ID });
+  const verified = await verifyWebhookSignature(getPayPal(), {
+    headers,
+    rawBody,
+    webhookId: env.PAYPAL_WEBHOOK_ID,
+  });
   if (!verified) {
     log.warn({ event_id: event.id, event_type: event.event_type }, "rejected webhook with invalid signature");
     throw new AppError("FORBIDDEN", "Webhook signature verification failed");
@@ -70,9 +82,15 @@ export async function processWebhookEvent(eventId: string): Promise<string> {
   let result: string;
   try {
     result = await dispatch(event);
-    await db.update(webhookEvents).set({ processedAt: new Date(), error: null }).where(eq(webhookEvents.id, eventId));
+    await db
+      .update(webhookEvents)
+      .set({ processedAt: new Date(), error: null })
+      .where(eq(webhookEvents.id, eventId));
   } catch (e) {
-    await db.update(webhookEvents).set({ error: String((e as Error).message ?? e) }).where(eq(webhookEvents.id, eventId));
+    await db
+      .update(webhookEvents)
+      .set({ error: String((e as Error).message ?? e) })
+      .where(eq(webhookEvents.id, eventId));
     throw e;
   }
   log.info({ event_id: eventId, event_type: event.event_type, result }, "webhook processed");
@@ -133,7 +151,13 @@ async function onAuthorizationCreated(auth: Authorization & Related) {
   if (!f) return "unknown_order";
   if (f.status === "AUTHORIZED" || f.status === "REAUTHORIZED") return "already_secured";
   if (f.status === "CANCELLED") return "funding_cancelled";
-  await recordAuthorization({ milestoneId: f.milestoneId, orderId, authorization: auth, actor: PAYPAL, source: "webhook" });
+  await recordAuthorization({
+    milestoneId: f.milestoneId,
+    orderId,
+    authorization: auth,
+    actor: PAYPAL,
+    source: "webhook",
+  });
   return "funds_secured";
 }
 
@@ -182,12 +206,20 @@ async function onCaptureEvent(capture: Capture & Related) {
     candidates.filter((x) => x.paypalAuthorizationId).sort((a, b) => b.attempt - a.attempt)[0];
   if (!funding) return "no_funding";
   const isFull = fromPayPalValue(capture.amount.value) === funding.amountMinor;
-  const outcome = await recordCapture(s.id, funding, capture, { isFull, milestoneId: ctx.milestone.id, promiseId: ctx.promise.id });
+  const outcome = await recordCapture(s.id, funding, capture, {
+    isFull,
+    milestoneId: ctx.milestone.id,
+    promiseId: ctx.promise.id,
+  });
   return `capture_${outcome}`;
 }
 
 async function onCaptureRefunded(event: WebhookEvent) {
-  const refund = event.resource as { id: string; amount?: { value: string }; links?: { href: string; rel: string }[] };
+  const refund = event.resource as {
+    id: string;
+    amount?: { value: string };
+    links?: { href: string; rel: string }[];
+  };
   const captureHref = refund.links?.find((l) => l.rel === "up")?.href;
   const captureId = captureHref?.split("/").pop();
   if (!captureId) return "no_capture_link";
@@ -200,7 +232,12 @@ async function onCaptureRefunded(event: WebhookEvent) {
       promiseId: ctx.promise.id,
       type: "capture.refunded",
       actor: "paypal",
-      payload: { milestoneId: ctx.milestone.id, captureId, refundId: refund.id, amountMinor: refund.amount ? fromPayPalValue(refund.amount.value) : null },
+      payload: {
+        milestoneId: ctx.milestone.id,
+        captureId,
+        refundId: refund.id,
+        amountMinor: refund.amount ? fromPayPalValue(refund.amount.value) : null,
+      },
     }),
   );
   return "refund_recorded";
@@ -230,7 +267,9 @@ async function onPayoutItem(item: PayoutItem) {
 /** Phase 1: record and flag. Evidence-pack upload (SPEC §6.8) lands with the PDF in Phase 4. */
 async function onDispute(type: string, dispute: Dispute) {
   const db = getDb();
-  const captureIds = (dispute.disputed_transactions ?? []).map((t) => t.seller_transaction_id).filter(Boolean) as string[];
+  const captureIds = (dispute.disputed_transactions ?? [])
+    .map((t) => t.seller_transaction_id)
+    .filter(Boolean) as string[];
   if (captureIds.length === 0) return "no_transactions";
   const rows = await db.select().from(settlements).where(inArray(settlements.paypalCaptureId, captureIds));
   for (const s of rows) {
@@ -240,7 +279,12 @@ async function onDispute(type: string, dispute: Dispute) {
         promiseId: ctx.promise.id,
         type: `paypal.${type.toLowerCase().replace("customer.", "")}`,
         actor: "paypal",
-        payload: { milestoneId: ctx.milestone.id, disputeId: dispute.dispute_id, status: dispute.status, reason: dispute.reason ?? null },
+        payload: {
+          milestoneId: ctx.milestone.id,
+          disputeId: dispute.dispute_id,
+          status: dispute.status,
+          reason: dispute.reason ?? null,
+        },
       });
       if (type === "CUSTOMER.DISPUTE.CREATED") {
         await tx.insert(riskFlags).values({
@@ -248,7 +292,11 @@ async function onDispute(type: string, dispute: Dispute) {
           subjectId: ctx.promise.id,
           code: "PAYPAL_DISPUTE",
           severity: "high",
-          detail: { disputeId: dispute.dispute_id, captureId: s.paypalCaptureId, reason: dispute.reason ?? null },
+          detail: {
+            disputeId: dispute.dispute_id,
+            captureId: s.paypalCaptureId,
+            reason: dispute.reason ?? null,
+          },
         });
       }
     });

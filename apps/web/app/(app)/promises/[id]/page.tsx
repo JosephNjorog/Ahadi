@@ -33,7 +33,9 @@ export default async function PromisePage({ params }: { params: Promise<{ id: st
               <PromiseStatusBadge state={p.state} />
             </div>
             <p className="mt-1 text-sm text-ink-muted">
-              {p.category} · {d.client?.displayName ?? "—"} → {d.worker?.displayName ?? "worker not invited yet"} · {d.role ? `you are the ${d.role}` : "admin view"}
+              {p.category} · {d.client?.displayName ?? "—"} →{" "}
+              {d.worker?.displayName ?? "worker not invited yet"} ·{" "}
+              {d.role ? `you are the ${d.role}` : "admin view"}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -62,13 +64,20 @@ export default async function PromisePage({ params }: { params: Promise<{ id: st
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader title="Signed terms" description={terms ? `Version ${terms.version} · ${formatDateTime(terms.createdAt)}` : "Not drafted yet"} />
+          <CardHeader
+            title="Signed terms"
+            description={
+              terms ? `Version ${terms.version} · ${formatDateTime(terms.createdAt)}` : "Not drafted yet"
+            }
+          />
           <CardBody className="space-y-3 text-sm">
             {terms ? (
               <>
                 <p className="text-ink-muted">{terms.body.scopeSummary}</p>
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-ink-subtle">Terms hash (SHA-256)</p>
+                  <p className="text-xs font-medium uppercase tracking-wide text-ink-subtle">
+                    Terms hash (SHA-256)
+                  </p>
                   <p className="mt-1 break-all font-mono text-xs">{terms.bodyHash}</p>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -79,7 +88,9 @@ export default async function PromisePage({ params }: { params: Promise<{ id: st
                         <p className="text-xs font-medium uppercase tracking-wide text-ink-subtle">{party}</p>
                         {s ? (
                           <p className="mt-0.5 flex flex-wrap items-center gap-2">
-                            <Badge tone={s.bodyHash === terms.bodyHash ? "brand" : "danger"}>{s.bodyHash === terms.bodyHash ? "Signed" : "Hash mismatch"}</Badge>
+                            <Badge tone={s.bodyHash === terms.bodyHash ? "brand" : "danger"}>
+                              {s.bodyHash === terms.bodyHash ? "Signed" : "Hash mismatch"}
+                            </Badge>
                             <span className="text-xs text-ink-muted">{formatDateTime(s.signedAt)}</span>
                           </p>
                         ) : (
@@ -91,7 +102,9 @@ export default async function PromisePage({ params }: { params: Promise<{ id: st
                 </div>
                 {terms.body.outOfScope.length ? (
                   <div>
-                    <p className="text-xs font-medium uppercase tracking-wide text-ink-subtle">Out of scope</p>
+                    <p className="text-xs font-medium uppercase tracking-wide text-ink-subtle">
+                      Out of scope
+                    </p>
                     <ul className="mt-1 list-disc pl-5 text-ink-muted">
                       {terms.body.outOfScope.map((x) => (
                         <li key={x}>{x}</li>

@@ -22,13 +22,22 @@ export default async function FundPage({
   const sp = await searchParams;
   const user = await requireUser(`/promises/${id}/fund`);
   const d = await orNotFound(() => getPromiseDetail(actorFor(user), id));
-  const m = d.milestones.find((x) => x.id === sp.milestone) ?? d.milestones.find((x) => x.state === "UNFUNDED" || x.state === "FUNDING") ?? d.milestones[0];
+  const m =
+    d.milestones.find((x) => x.id === sp.milestone) ??
+    d.milestones.find((x) => x.state === "UNFUNDED" || x.state === "FUNDING") ??
+    d.milestones[0];
   const back = (
     <Link href={`/promises/${id}`} className="text-sm text-ink-muted hover:text-ink">
       ← Back to promise
     </Link>
   );
-  if (!m) return <div className="space-y-4">{back}<Alert tone="warn" title="This promise has no milestones yet" /></div>;
+  if (!m)
+    return (
+      <div className="space-y-4">
+        {back}
+        <Alert tone="warn" title="This promise has no milestones yet" />
+      </div>
+    );
 
   const amount = formatMoney(m.amountMinor, d.promise.currency);
   const f = m.funding;
@@ -47,7 +56,15 @@ export default async function FundPage({
 
       <div className="grid gap-6 md:grid-cols-5">
         <Card className="md:col-span-3">
-          <CardHeader title={m.title} description={<span className="inline-flex items-center gap-2">Status <MilestoneStatusBadge state={m.state} /></span>} action={<p className="tabular text-2xl font-semibold">{amount}</p>} />
+          <CardHeader
+            title={m.title}
+            description={
+              <span className="inline-flex items-center gap-2">
+                Status <MilestoneStatusBadge state={m.state} />
+              </span>
+            }
+            action={<p className="tabular text-2xl font-semibold">{amount}</p>}
+          />
           <CardBody className="space-y-3">
             <p className="text-sm font-medium">The worker is paid only for these, as signed:</p>
             <ul className="space-y-2">
@@ -56,8 +73,14 @@ export default async function FundPage({
                   <span className="tabular mt-0.5 w-10 shrink-0 text-right text-ink-subtle">{c.weight}%</span>
                   <span className="min-w-0">
                     <span className="font-medium">{c.spec.title}</span>{" "}
-                    <Badge tone="neutral" className="ml-1">{METHOD_LABEL[c.spec.method]}</Badge>
-                    {c.required ? <Badge tone="warn" className="ml-1">Required</Badge> : null}
+                    <Badge tone="neutral" className="ml-1">
+                      {METHOD_LABEL[c.spec.method]}
+                    </Badge>
+                    {c.required ? (
+                      <Badge tone="warn" className="ml-1">
+                        Required
+                      </Badge>
+                    ) : null}
                   </span>
                 </li>
               ))}
@@ -71,12 +94,15 @@ export default async function FundPage({
           <CardBody>
             {d.role !== "client" ? (
               <Alert tone="info" title="Only the client funds milestones">
-                {d.role === "worker" ? "You'll see “Funds secured” here as soon as the client approves the PayPal hold." : "Switch to the client to fund."}
+                {d.role === "worker"
+                  ? "You'll see “Funds secured” here as soon as the client approves the PayPal hold."
+                  : "Switch to the client to fund."}
               </Alert>
             ) : secured ? (
               <div className="space-y-3">
                 <Alert tone="brand" title={`Funds secured (${amount})`}>
-                  PayPal is holding the money. Authorization <span className="font-mono">{f.paypalAuthorizationId}</span>.
+                  PayPal is holding the money. Authorization{" "}
+                  <span className="font-mono">{f.paypalAuthorizationId}</span>.
                 </Alert>
                 <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
                   <dt className="text-ink-subtle">Honor period</dt>
@@ -89,9 +115,13 @@ export default async function FundPage({
                 </ButtonLink>
               </div>
             ) : !agreed ? (
-              <Alert tone="warn" title="Terms not signed yet">Both sides must sign the same terms version before money can be secured.</Alert>
+              <Alert tone="warn" title="Terms not signed yet">
+                Both sides must sign the same terms version before money can be secured.
+              </Alert>
             ) : !fundable ? (
-              <Alert tone="info" title="Nothing to fund">This milestone is {m.state.toLowerCase().replace("_", " ")}.</Alert>
+              <Alert tone="info" title="Nothing to fund">
+                This milestone is {m.state.toLowerCase().replace("_", " ")}.
+              </Alert>
             ) : (
               <FundWithPayPal
                 milestoneId={m.id}

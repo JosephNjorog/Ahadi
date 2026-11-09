@@ -40,7 +40,9 @@ export const users = pgTable("users", {
   paypalPayerId: text("paypal_payer_id"),
   country: text("country"),
   phoneE164: text("phone_e164"),
-  role: text("role", { enum: ["member", "admin"] }).notNull().default("member"),
+  role: text("role", { enum: ["member", "admin"] })
+    .notNull()
+    .default("member"),
   passportSlug: text("passport_slug").unique(),
   createdAt: createdAt(),
 });
@@ -82,7 +84,9 @@ export const mandates = pgTable("mandates", {
   monthlyMaxMinor: minor("monthly_max_minor").notNull(),
   currency: text("currency").notNull().default("USD"),
   allowedCategories: text("allowed_categories").array().notNull(),
-  minProviderScore: numeric("min_provider_score", { precision: 4, scale: 3, mode: "number" }).notNull().default(0),
+  minProviderScore: numeric("min_provider_score", { precision: 4, scale: 3, mode: "number" })
+    .notNull()
+    .default(0),
   requireOwnerApprovalAboveMinor: minor("require_owner_approval_above_minor"),
   active: boolean("active").notNull().default(true),
   updatedAt: updatedAt(),
@@ -177,7 +181,10 @@ export const criteria = pgTable(
     weight: integer("weight").notNull(),
     required: boolean("required").notNull().default(false),
   },
-  (t) => [unique().on(t.milestoneId, t.key), check("criteria_weight_range", sql`${t.weight} between 0 and 100`)],
+  (t) => [
+    unique().on(t.milestoneId, t.key),
+    check("criteria_weight_range", sql`${t.weight} between 0 and 100`),
+  ],
 );
 
 export const splits = pgTable(
@@ -311,7 +318,10 @@ export const criterionResults = pgTable(
     decidedBy: text("decided_by", { enum: ["machine", "agent", "human"] }).notNull(),
     reasoning: text("reasoning").notNull(),
     howToFix: text("how_to_fix"),
-    evidenceArtifactIds: uuid("evidence_artifact_ids").array().notNull().default(sql`'{}'::uuid[]`),
+    evidenceArtifactIds: uuid("evidence_artifact_ids")
+      .array()
+      .notNull()
+      .default(sql`'{}'::uuid[]`),
   },
   (t) => [unique().on(t.verificationId, t.criterionId)],
 );
@@ -349,7 +359,9 @@ export const settlements = pgTable("settlements", {
     .notNull()
     .unique()
     .references(() => proposals.id),
-  status: text("status", { enum: ["PENDING", "CAPTURE_PENDING", "CAPTURED", "VOIDED", "PAID", "FAILED"] }).notNull(),
+  status: text("status", {
+    enum: ["PENDING", "CAPTURE_PENDING", "CAPTURED", "VOIDED", "PAID", "FAILED"],
+  }).notNull(),
   paypalCaptureId: text("paypal_capture_id").unique(),
   capturedMinor: minor("captured_minor"),
   paypalFeeMinor: minor("paypal_fee_minor"),

@@ -4,7 +4,8 @@
  * PayPal-Request-Id allows up to 108 characters.
  */
 export const idempotencyKeys = {
-  createOrder: (milestoneId: string, fundingAttempt: number) => `ahadi:order:${milestoneId}:${fundingAttempt}`,
+  createOrder: (milestoneId: string, fundingAttempt: number) =>
+    `ahadi:order:${milestoneId}:${fundingAttempt}`,
   authorizeOrder: (paypalOrderId: string) => `ahadi:auth:${paypalOrderId}`,
   reauthorize: (authorizationId: string) => `ahadi:reauth:${authorizationId}`,
   capture: (proposalId: string) => `ahadi:capture:${proposalId}`,

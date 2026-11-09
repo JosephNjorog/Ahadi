@@ -51,7 +51,12 @@ export async function voidAuthorization(client: PayPalClient, authorizationId: s
 }
 
 /** Reauthorize after the 3-day honor period; returns a NEW authorization id. */
-export async function reauthorize(client: PayPalClient, authorizationId: string, amount: Money, requestId: string) {
+export async function reauthorize(
+  client: PayPalClient,
+  authorizationId: string,
+  amount: Money,
+  requestId: string,
+) {
   return client.request<Authorization>({
     operation: "authorizations.reauthorize",
     path: `/v2/payments/authorizations/${encodeURIComponent(authorizationId)}/reauthorize`,

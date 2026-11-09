@@ -13,8 +13,16 @@ async function main() {
 
   // Recurring jobs (SPEC §17). upsert is idempotent across restarts and multiple instances.
   const queue = getQueue();
-  await queue.upsertJobScheduler("authorization-monitor", { every: 60 * 60 * 1000 }, { name: "authorization.monitor", data: {} });
-  await queue.upsertJobScheduler("payout-reconcile", { every: 15 * 60 * 1000 }, { name: "payout.reconcile", data: {} });
+  await queue.upsertJobScheduler(
+    "authorization-monitor",
+    { every: 60 * 60 * 1000 },
+    { name: "authorization.monitor", data: {} },
+  );
+  await queue.upsertJobScheduler(
+    "payout-reconcile",
+    { every: 15 * 60 * 1000 },
+    { name: "payout.reconcile", data: {} },
+  );
 
   const connection = redisConnection() as unknown as ConnectionOptions;
   const worker = new Worker(QUEUE_NAME, runJob, {
@@ -28,11 +36,19 @@ async function main() {
   worker.on("failed", async (job, err) => {
     if (!job) return;
     const final = err.name === "UnrecoverableError" || job.attemptsMade >= (job.opts.attempts ?? 1);
-    log[final ? "error" : "warn"]({ job_id: job.id, job: job.name, attempt: job.attemptsMade, err: err.message }, final ? "job dead-lettered" : "job failed, will retry");
+    log[final ? "error" : "warn"](
+      { job_id: job.id, job: job.name, attempt: job.attemptsMade, err: err.message },
+      final ? "job dead-lettered" : "job failed, will retry",
+    );
     if (final) {
-      await recordJobFailure({ queue: QUEUE_NAME, jobName: job.name, jobId: job.id, data: job.data, error: err.message, attempts: job.attemptsMade }).catch((e) =>
-        log.error({ err: String(e) }, "could not record job failure"),
-      );
+      await recordJobFailure({
+        queue: QUEUE_NAME,
+        jobName: job.name,
+        jobId: job.id,
+        data: job.data,
+        error: err.message,
+        attempts: job.attemptsMade,
+      }).catch((e) => log.error({ err: String(e) }, "could not record job failure"));
     }
   });
   worker.on("error", (err) => log.error({ err: err.message }, "worker error"));

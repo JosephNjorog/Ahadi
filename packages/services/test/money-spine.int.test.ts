@@ -35,12 +35,18 @@ afterAll(async () => {
   await db.closeDb();
 });
 
-const asUser = async (role: "client" | "worker" | "admin") => ({ kind: "user" as const, user: await svc.demoUser(role) });
-const milestone = async () => (await db.getDb().select().from(db.milestones).where(eq(db.milestones.id, milestoneId)))[0]!;
+const asUser = async (role: "client" | "worker" | "admin") => ({
+  kind: "user" as const,
+  user: await svc.demoUser(role),
+});
+const milestone = async () =>
+  (await db.getDb().select().from(db.milestones).where(eq(db.milestones.id, milestoneId)))[0]!;
 
 describe("Phase 1 money spine (fake PayPal, real Postgres + Redis)", () => {
   it("refuses funding by the worker", async () => {
-    await expect(svc.createMilestoneOrder(await asUser("worker"), milestoneId)).rejects.toThrow(/Only the client/);
+    await expect(svc.createMilestoneOrder(await asUser("worker"), milestoneId)).rejects.toThrow(
+      /Only the client/,
+    );
   });
 
   it("client funds $400: order → authorize → FUNDED, promise ACTIVE", async () => {
@@ -65,13 +71,22 @@ describe("Phase 1 money spine (fake PayPal, real Postgres + Redis)", () => {
   it("webhook for the same authorization is idempotent", async () => {
     const [f] = await db.getDb().select().from(db.fundings).where(eq(db.fundings.milestoneId, milestoneId));
     const auth = fake.auths.get(f!.paypalAuthorizationId!)!;
-    await db.getDb().insert(db.webhookEvents).values({
-      id: "WH-AUTH-1",
-      eventType: "PAYMENT.AUTHORIZATION.CREATED",
-      resourceId: auth.id,
-      verified: true,
-      payload: { id: "WH-AUTH-1", event_type: "PAYMENT.AUTHORIZATION.CREATED", create_time: new Date().toISOString(), resource_type: "authorization", resource: { ...auth, supplementary_data: { related_ids: { order_id: f!.paypalOrderId } } } },
-    });
+    await db
+      .getDb()
+      .insert(db.webhookEvents)
+      .values({
+        id: "WH-AUTH-1",
+        eventType: "PAYMENT.AUTHORIZATION.CREATED",
+        resourceId: auth.id,
+        verified: true,
+        payload: {
+          id: "WH-AUTH-1",
+          event_type: "PAYMENT.AUTHORIZATION.CREATED",
+          create_time: new Date().toISOString(),
+          resource_type: "authorization",
+          resource: { ...auth, supplementary_data: { related_ids: { order_id: f!.paypalOrderId } } },
+        },
+      });
     expect(await svc.processWebhookEvent("WH-AUTH-1")).toBe("already_secured");
     expect(await svc.processWebhookEvent("WH-AUTH-1")).toBe("already_processed");
   });
@@ -97,7 +112,10 @@ describe("Phase 1 money spine (fake PayPal, real Postgres + Redis)", () => {
     const [proposal] = await db.getDb().select().from(db.proposals);
     expect(await svc.executeSettlement(proposal!.id)).toBe("captured");
     const capCall = fake.calls.find((c) => c.path.endsWith("/capture"))!;
-    expect(capCall.body).toMatchObject({ amount: { value: "300.00", currency_code: "USD" }, final_capture: true });
+    expect(capCall.body).toMatchObject({
+      amount: { value: "300.00", currency_code: "USD" },
+      final_capture: true,
+    });
     expect(capCall.requestId).toBe(`ahadi:capture:${proposal!.id}`);
     const [s] = await db.getDb().select().from(db.settlements);
     expect(s!.status).toBe("CAPTURED");
@@ -134,7 +152,19 @@ describe("Phase 1 money spine (fake PayPal, real Postgres + Redis)", () => {
     const { events, verification } = await svc.getPromiseLedger(await asUser("client"), promiseId);
     expect(verification.valid).toBe(true);
     const types = events.map((e) => e.type);
-    for (const t of ["promise.created", "terms.signed", "funding.order_created", "funding.secured", "promise.activated", "proposal.published", "settlement.captured", "payout.sent", "payout.succeeded", "milestone.settled", "promise.completed"]) {
+    for (const t of [
+      "promise.created",
+      "terms.signed",
+      "funding.order_created",
+      "funding.secured",
+      "promise.activated",
+      "proposal.published",
+      "settlement.captured",
+      "payout.sent",
+      "payout.succeeded",
+      "milestone.settled",
+      "promise.completed",
+    ]) {
       expect(types).toContain(t);
     }
   });

@@ -28,7 +28,11 @@ export function isAdmin(a: Actor): boolean {
   return a.kind === "user" && a.user.role === "admin";
 }
 
-export function assertParty(a: Actor, p: Pick<PromiseRow, "clientUserId" | "workerUserId">, role?: PartyRole): PartyRole {
+export function assertParty(
+  a: Actor,
+  p: Pick<PromiseRow, "clientUserId" | "workerUserId">,
+  role?: PartyRole,
+): PartyRole {
   const r = partyRole(a, p);
   if (!r) throw new AppError("FORBIDDEN", "You are not a party to this promise");
   if (role && r !== role) throw new AppError("FORBIDDEN", `Only the ${role} can do this`);

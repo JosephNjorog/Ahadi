@@ -12,5 +12,12 @@ export const GET = withUser(async ({ actor }) => {
 export const PUT = withUser(async ({ req, actor }) => {
   if (actor.kind !== "user") throw new Error("unreachable");
   const user = await updateProfile(actor.user.id, await req.json().catch(() => ({})));
-  return NextResponse.json({ user: { id: user.id, displayName: user.displayName, paypalEmail: user.paypalEmail, country: user.country } });
+  return NextResponse.json({
+    user: {
+      id: user.id,
+      displayName: user.displayName,
+      paypalEmail: user.paypalEmail,
+      country: user.country,
+    },
+  });
 });

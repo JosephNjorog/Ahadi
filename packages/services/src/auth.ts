@@ -13,11 +13,16 @@ const EmailSchema = z.string().trim().toLowerCase().email().max(254);
 const hashToken = (t: string) => createHash("sha256").update(t).digest("hex");
 
 /** Request a magic link. Always behaves the same whether or not the email exists (no account enumeration). */
-export async function requestMagicLink(rawEmail: string, nextPath = "/dashboard"): Promise<{ devLink?: string }> {
+export async function requestMagicLink(
+  rawEmail: string,
+  nextPath = "/dashboard",
+): Promise<{ devLink?: string }> {
   const email = EmailSchema.parse(rawEmail);
   const env = getEnv();
   const token = randomBytes(32).toString("base64url");
-  await getDb().insert(authTokens).values({ email, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + MAGIC_LINK_TTL_MS) });
+  await getDb()
+    .insert(authTokens)
+    .values({ email, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + MAGIC_LINK_TTL_MS) });
   const safeNext = nextPath.startsWith("/") && !nextPath.startsWith("//") ? nextPath : "/dashboard";
   const link = `${env.APP_URL.replace(/\/$/, "")}/api/auth/callback?token=${token}&next=${encodeURIComponent(safeNext)}`;
   const { delivered } = await sendEmail({
@@ -37,7 +42,13 @@ export async function consumeMagicLink(token: string): Promise<User> {
   const [row] = await db
     .update(authTokens)
     .set({ usedAt: now })
-    .where(and(eq(authTokens.tokenHash, hashToken(token)), isNull(authTokens.usedAt), gt(authTokens.expiresAt, now)))
+    .where(
+      and(
+        eq(authTokens.tokenHash, hashToken(token)),
+        isNull(authTokens.usedAt),
+        gt(authTokens.expiresAt, now),
+      ),
+    )
     .returning();
   if (!row) throw new AppError("UNAUTHENTICATED", "This sign-in link is invalid or has expired");
   const [existing] = await db.select().from(users).where(eq(users.email, row.email));
@@ -62,7 +73,12 @@ export type DemoRole = "client" | "worker" | "admin";
 export async function demoUser(role: DemoRole): Promise<User> {
   const env = getEnv();
   if (!env.DEMO_MODE) throw new AppError("FORBIDDEN", "Demo sign-in is disabled");
-  const email = role === "client" ? env.DEMO_CLIENT_EMAIL : role === "worker" ? env.DEMO_WORKER_EMAIL : env.DEMO_ADMIN_EMAIL;
+  const email =
+    role === "client"
+      ? env.DEMO_CLIENT_EMAIL
+      : role === "worker"
+        ? env.DEMO_WORKER_EMAIL
+        : env.DEMO_ADMIN_EMAIL;
   const [u] = await getDb().select().from(users).where(eq(users.email, email));
   if (!u) throw new AppError("NOT_FOUND", "Demo users are missing — run npm run db:seed");
   return u;
@@ -76,7 +92,12 @@ const ProfileSchema = z.object({
 
 export async function updateProfile(userId: string, input: unknown): Promise<User> {
   const parsed = ProfileSchema.safeParse(input);
-  if (!parsed.success) throw new AppError("VALIDATION_FAILED", "Check the highlighted fields", parsed.error.flatten().fieldErrors);
+  if (!parsed.success)
+    throw new AppError(
+      "VALIDATION_FAILED",
+      "Check the highlighted fields",
+      parsed.error.flatten().fieldErrors,
+    );
   const [u] = await getDb().update(users).set(parsed.data).where(eq(users.id, userId)).returning();
   if (!u) throw new AppError("NOT_FOUND", "User not found");
   return u;

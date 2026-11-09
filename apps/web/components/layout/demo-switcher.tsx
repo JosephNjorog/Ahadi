@@ -18,7 +18,11 @@ export function DemoSwitcher({ currentEmail }: { currentEmail: string }) {
 
   async function switchTo(role: string) {
     setError(null);
-    const res = await fetch("/api/auth/demo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role }) });
+    const res = await fetch("/api/auth/demo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role }),
+    });
     if (!res.ok) {
       setError((await res.json().catch(() => null))?.error?.message ?? "Switch failed");
       return;

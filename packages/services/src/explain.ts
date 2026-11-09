@@ -12,7 +12,9 @@ export function templateExplanation(args: {
 }): string {
   const { proposal: p, amountMinor, currency, titles } = args;
   const passed = p.breakdown.filter((c) => c.creditPct === 100).map((c) => titles[c.id] ?? c.id);
-  const partial = p.breakdown.filter((c) => c.creditPct > 0 && c.creditPct < 100).map((c) => `${titles[c.id] ?? c.id} (${c.creditPct}%)`);
+  const partial = p.breakdown
+    .filter((c) => c.creditPct > 0 && c.creditPct < 100)
+    .map((c) => `${titles[c.id] ?? c.id} (${c.creditPct}%)`);
   const failed = p.breakdown.filter((c) => c.creditPct === 0).map((c) => titles[c.id] ?? c.id);
   const total = p.breakdown.length;
 
@@ -37,6 +39,9 @@ export function templateExplanation(args: {
   if (passed.length) parts.push(`Met: ${passed.join(", ")}.`);
   if (partial.length) parts.push(`Partly met: ${partial.join(", ")}.`);
   if (failed.length) parts.push(`Not met: ${failed.join(", ")}.`);
-  if (p.captureMinor < amountMinor) parts.push(`The remaining ${formatMoney(amountMinor - p.captureMinor, currency)} is released back to the client.`);
+  if (p.captureMinor < amountMinor)
+    parts.push(
+      `The remaining ${formatMoney(amountMinor - p.captureMinor, currency)} is released back to the client.`,
+    );
   return parts.join(" ");
 }

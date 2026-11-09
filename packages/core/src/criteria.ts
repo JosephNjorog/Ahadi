@@ -25,9 +25,17 @@ export const MachineCheckSchema = z.discriminatedUnion("kind", [
     hiddenSuiteId: z.string().optional(),
   }),
   z.object({ kind: z.literal("build_succeeds"), command: z.string() }),
-  z.object({ kind: z.literal("word_count"), min: z.number().int().optional(), max: z.number().int().optional() }),
+  z.object({
+    kind: z.literal("word_count"),
+    min: z.number().int().optional(),
+    max: z.number().int().optional(),
+  }),
   z.object({ kind: z.literal("min_citations"), count: z.number().int(), mustResolve: z.boolean() }),
-  z.object({ kind: z.literal("file_set"), patterns: z.array(z.string()), minCount: z.number().int().optional() }),
+  z.object({
+    kind: z.literal("file_set"),
+    patterns: z.array(z.string()),
+    minCount: z.number().int().optional(),
+  }),
   z.object({
     kind: z.literal("image_dimensions"),
     width: z.number().int(),
@@ -35,7 +43,11 @@ export const MachineCheckSchema = z.discriminatedUnion("kind", [
     tolerancePx: z.number().int().optional(),
   }),
   z.object({ kind: z.literal("json_schema"), schemaArtifactId: z.string() }),
-  z.object({ kind: z.literal("csv_columns"), columns: z.array(z.string()), minRows: z.number().int().optional() }),
+  z.object({
+    kind: z.literal("csv_columns"),
+    columns: z.array(z.string()),
+    minRows: z.number().int().optional(),
+  }),
 ]);
 export type MachineCheck = z.infer<typeof MachineCheckSchema>;
 
@@ -110,12 +122,16 @@ export function validateTerms(body: TermsBody, budgetMinor?: number): TermsIssue
   const issues: TermsIssue[] = [];
   const total = body.milestones.reduce((s, m) => s + m.amountMinor, 0);
   if (budgetMinor !== undefined && total !== budgetMinor) {
-    issues.push({ path: "milestones", message: `Milestone amounts sum to ${total}, budget is ${budgetMinor}` });
+    issues.push({
+      path: "milestones",
+      message: `Milestone amounts sum to ${total}, budget is ${budgetMinor}`,
+    });
   }
   body.milestones.forEach((m, i) => {
     const p = `milestones[${i}]`;
     const weights = m.criteria.reduce((s, c) => s + c.weight, 0);
-    if (weights !== 100) issues.push({ path: p, message: `Criterion weights sum to ${weights}, must be 100` });
+    if (weights !== 100)
+      issues.push({ path: p, message: `Criterion weights sum to ${weights}, must be 100` });
     const ids = new Set<string>();
     for (const c of m.criteria) {
       if (ids.has(c.id)) issues.push({ path: `${p}.${c.id}`, message: "Duplicate criterion id" });

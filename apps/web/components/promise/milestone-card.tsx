@@ -43,7 +43,9 @@ export function MilestoneCard({
     <Card as="article" className="overflow-hidden">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-5 py-4">
         <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-wide text-ink-subtle">Milestone {m.position}</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-ink-subtle">
+            Milestone {m.position}
+          </p>
           <h3 className="mt-0.5 text-lg font-semibold">{m.title}</h3>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-ink-muted">
             <MilestoneStatusBadge state={m.state} />
@@ -59,7 +61,9 @@ export function MilestoneCard({
         </div>
       </div>
 
-      {guidance ? <p className="border-b border-line bg-canvas px-5 py-3 text-sm text-ink-muted">{guidance}</p> : null}
+      {guidance ? (
+        <p className="border-b border-line bg-canvas px-5 py-3 text-sm text-ink-muted">{guidance}</p>
+      ) : null}
 
       <div className="grid gap-0 lg:grid-cols-5">
         <div className="border-line px-5 py-4 lg:col-span-3 lg:border-r">
@@ -116,7 +120,11 @@ export function MilestoneCard({
                 {secured && f.honorExpiresAt ? (
                   <>
                     <dt className="text-ink-subtle">Honor period</dt>
-                    <dd>{new Date(f.honorExpiresAt) > new Date() ? `ends ${relativeTime(f.honorExpiresAt)}` : "ended — Ahadi reauthorizes automatically"}</dd>
+                    <dd>
+                      {new Date(f.honorExpiresAt) > new Date()
+                        ? `ends ${relativeTime(f.honorExpiresAt)}`
+                        : "ended — Ahadi reauthorizes automatically"}
+                    </dd>
                   </>
                 ) : null}
                 {secured && f.expiresAt ? (
@@ -129,7 +137,9 @@ export function MilestoneCard({
             )}
             {canFund ? (
               <ButtonLink href={`/promises/${promiseId}/fund?milestone=${m.id}`} className="mt-3 w-full">
-                {m.state === "FUNDING" ? "Continue funding with PayPal" : `Fund ${formatMoney(m.amountMinor, currency)} with PayPal`}
+                {m.state === "FUNDING"
+                  ? "Continue funding with PayPal"
+                  : `Fund ${formatMoney(m.amountMinor, currency)} with PayPal`}
               </ButtonLink>
             ) : null}
             {isAdmin && m.state === "FUNDED" ? (
@@ -153,11 +163,18 @@ export function MilestoneCard({
                   <dt className="text-ink-muted">Ahadi fee ({bpsToPercent(platformFeeBps)})</dt>
                   <dd>{formatMoney(p.platformFeeMinor, currency)}</dd>
                   <dt className="text-ink-muted">Worker receives (before PayPal fee)</dt>
-                  <dd className="font-medium">{formatMoney(p.captureMinor - p.platformFeeMinor, currency)}</dd>
+                  <dd className="font-medium">
+                    {formatMoney(p.captureMinor - p.platformFeeMinor, currency)}
+                  </dd>
                   {currency === "USD" && p.captureMinor > 0 ? (
                     <>
                       <dt className="text-ink-muted">≈ M-Pesa (estimate)</dt>
-                      <dd>KES {estimateMpesaKes(p.captureMinor - p.platformFeeMinor, kesPerUsd).toLocaleString("en-KE")}</dd>
+                      <dd>
+                        KES{" "}
+                        {estimateMpesaKes(p.captureMinor - p.platformFeeMinor, kesPerUsd).toLocaleString(
+                          "en-KE",
+                        )}
+                      </dd>
                     </>
                   ) : null}
                 </dl>
@@ -200,15 +217,25 @@ export function MilestoneCard({
                         <span className="truncate">{x.recipientPaypalEmail}</span>
                         <span className="tabular flex items-center gap-2">
                           {formatMoney(x.amountMinor, x.currency)}
-                          <Badge tone={x.status === "SUCCESS" ? "brand" : x.status === "PENDING" ? "info" : "danger"}>{x.status.toLowerCase()}</Badge>
+                          <Badge
+                            tone={
+                              x.status === "SUCCESS" ? "brand" : x.status === "PENDING" ? "info" : "danger"
+                            }
+                          >
+                            {x.status.toLowerCase()}
+                          </Badge>
                         </span>
                       </li>
                     ))}
                   </ul>
-                  <p className="mt-1 text-xs text-ink-subtle">Total paid out {formatMoney(paidOut, currency)}</p>
+                  <p className="mt-1 text-xs text-ink-subtle">
+                    Total paid out {formatMoney(paidOut, currency)}
+                  </p>
                 </div>
               ) : null}
-              {isAdmin ? <AdminSettlementActions settlementId={s.id} status={s.status} error={s.error} /> : null}
+              {isAdmin ? (
+                <AdminSettlementActions settlementId={s.id} status={s.status} error={s.error} />
+              ) : null}
             </section>
           ) : null}
         </div>

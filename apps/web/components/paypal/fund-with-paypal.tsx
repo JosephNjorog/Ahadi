@@ -21,7 +21,9 @@ async function post<T>(url: string, body?: unknown): Promise<T> {
   });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const err = new Error(json?.error?.message ?? `Request failed (${res.status})`) as Error & { debugId?: string };
+    const err = new Error(json?.error?.message ?? `Request failed (${res.status})`) as Error & {
+      debugId?: string;
+    };
     err.debugId = json?.error?.details?.debugId;
     throw err;
   }
@@ -54,9 +56,16 @@ export function FundWithPayPal({
     async (orderId: string) => {
       setPhase({ k: "authorizing" });
       try {
-        const r = await post<{ authorizationId: string; status: string }>(`/api/milestones/${milestoneId}/authorize`, { orderId });
+        const r = await post<{ authorizationId: string; status: string }>(
+          `/api/milestones/${milestoneId}/authorize`,
+          { orderId },
+        );
         if (r.status === "APPROVED") {
-          setPhase({ k: "error", message: "PayPal is still reviewing this payment. We'll mark the funds secured as soon as PayPal confirms." });
+          setPhase({
+            k: "error",
+            message:
+              "PayPal is still reviewing this payment. We'll mark the funds secured as soon as PayPal confirms.",
+          });
         } else {
           setPhase({ k: "secured", authorizationId: r.authorizationId });
         }
@@ -104,7 +113,11 @@ export function FundWithPayPal({
         router.refresh();
       },
       onError: (err) => {
-        setPhase((p) => (p.k === "error" ? p : { k: "error", message: "PayPal couldn't complete the checkout. Please try again." }));
+        setPhase((p) =>
+          p.k === "error"
+            ? p
+            : { k: "error", message: "PayPal couldn't complete the checkout. Please try again." },
+        );
         console.error("PayPal Buttons error", err);
       },
     });
@@ -120,7 +133,8 @@ export function FundWithPayPal({
   if (phase.k === "secured") {
     return (
       <Alert tone="brand" title={`Funds secured (${amountLabel})`}>
-        PayPal is holding the money. Nothing is captured until the work is verified. Authorization <span className="font-mono">{phase.authorizationId}</span>.
+        PayPal is holding the money. Nothing is captured until the work is verified. Authorization{" "}
+        <span className="font-mono">{phase.authorizationId}</span>.
       </Alert>
     );
   }
@@ -134,11 +148,25 @@ export function FundWithPayPal({
           </span>
         </Alert>
       ) : null}
-      {phase.k === "cancelled" ? <Alert tone="warn" title="Checkout cancelled">No money was held. You can try again whenever you're ready.</Alert> : null}
+      {phase.k === "cancelled" ? (
+        <Alert tone="warn" title="Checkout cancelled">
+          No money was held. You can try again whenever you're ready.
+        </Alert>
+      ) : null}
       {phase.k === "error" ? (
-        <Alert tone="danger" title="Funding didn't complete" action={<Button size="sm" variant="secondary" onClick={() => setPhase({ k: "idle" })}>Dismiss</Button>}>
+        <Alert
+          tone="danger"
+          title="Funding didn't complete"
+          action={
+            <Button size="sm" variant="secondary" onClick={() => setPhase({ k: "idle" })}>
+              Dismiss
+            </Button>
+          }
+        >
           {phase.message}
-          {phase.debugId ? <span className="mt-1 block font-mono text-xs">PayPal debug id {phase.debugId}</span> : null}
+          {phase.debugId ? (
+            <span className="mt-1 block font-mono text-xs">PayPal debug id {phase.debugId}</span>
+          ) : null}
         </Alert>
       ) : null}
 
@@ -147,10 +175,21 @@ export function FundWithPayPal({
           <Spinner className="size-4" /> Loading PayPal…
         </div>
       ) : null}
-      {sdk.status === "error" ? <Alert tone="danger" title="PayPal unavailable">{sdk.message}</Alert> : null}
-      <div ref={container} className={phase.k === "authorizing" || phase.k === "creating" ? "pointer-events-none opacity-60" : undefined} aria-label="PayPal checkout" />
+      {sdk.status === "error" ? (
+        <Alert tone="danger" title="PayPal unavailable">
+          {sdk.message}
+        </Alert>
+      ) : null}
+      <div
+        ref={container}
+        className={
+          phase.k === "authorizing" || phase.k === "creating" ? "pointer-events-none opacity-60" : undefined
+        }
+        aria-label="PayPal checkout"
+      />
       <p className="text-xs text-ink-subtle">
-        You approve an <strong>authorization</strong>, not a payment. PayPal holds {amountLabel}; Ahadi captures only the verified share and the rest is released back to you.
+        You approve an <strong>authorization</strong>, not a payment. PayPal holds {amountLabel}; Ahadi
+        captures only the verified share and the rest is released back to you.
       </p>
     </div>
   );
