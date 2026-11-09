@@ -17,7 +17,7 @@ An open ring with a dot settling inside it.
 | `ahadi-app-icon.svg` | App icon and favicon source (white mark on a black rounded square) |
 | `ahadi-mark-animated.svg` | Looping intro for motion work and previews (3.2s) |
 
-Ready-to-upload PNGs are in [`png/`](png/): the logo in black and white on transparent backgrounds (2000 × 600), the logo on solid white and black (1600 × 800), the mark in black and white (1024 × 1024), and the app icon (1024, 512 and 180).
+Ready-to-upload PNGs are in [`png/`](png/): the logo in black and white on transparent backgrounds (2000 × 600), the logo on solid white and black (1600 × 800), the mark in black and white (1024 × 1024), the app icon (1024, 512 and 180), and a 3:2 thumbnail for submission sites (1500 × 1000).
 
 In the web app, use `AhadiMark` and `AhadiLogo` from `apps/web/components/brand/ahadi-mark.tsx`. They draw in `currentColor`, and `animated` plays the intro once.
 
