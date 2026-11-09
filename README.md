@@ -1,72 +1,95 @@
-# Ahadi
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="brand/ahadi-logo-white.svg">
+    <img src="brand/ahadi-logo.svg" alt="ahadi" height="56">
+  </picture>
+</p>
 
-**PayPal moves the money. Ahadi decides when it should move.**
+<h3 align="center">Pay for work only when it's done.</h3>
 
-Ahadi (Swahili for *promise*) is a trust layer for paying for work — done by humans or by AI agents. Every payment becomes a **promise**: terms agreed in advance, funds secured through PayPal, and money released only when AI verifier agents confirm the work meets the agreed acceptance criteria.
+<p align="center">
+Ahadi holds the payment with PayPal, checks the delivered work against terms both sides signed,<br>
+and releases exactly the share that was earned. It works for people and for AI agents.
+</p>
 
-> Built for **Build What's Next with PayPal and AI** (2026) by [Elom Labs](https://synchstacksolutionslabs.vercel.app/), Nairobi.
-
-| | |
-|---|---|
-| 🎥 Demo video | `https://youtu.be/REPLACE_ME` |
-| 🌐 Live demo | `https://ahadi.onrender.com` (sandbox) |
-| 🛠 Setup guide (Neon + PayPal) | [docs/SETUP.md](docs/SETUP.md) |
-| 📐 Technical spec | [docs/SPEC.md](docs/SPEC.md) |
-| 🧠 Agent prompts | [docs/AGENT_PROMPTS.md](docs/AGENT_PROMPTS.md) |
-| 🤖 MCP guide | [docs/MCP.md](docs/MCP.md) |
-| 📄 License | [MIT](LICENSE) |
+<p align="center">
+  <a href="https://ahadi-web.onrender.com"><b>Live demo</b></a> ·
+  <a href="#test-it-yourself"><b>Test it yourself</b></a> ·
+  <a href="#a-real-sandbox-run">A real sandbox run</a> ·
+  <a href="docs/SETUP.md">Setup guide</a> ·
+  <a href="docs/STATUS.md">Build status</a>
+</p>
 
 ---
 
-## Table of contents
+**Ahadi** is Swahili for *promise*. Every payment for work becomes a promise:
+
+1. **Agree on what done means.** A plain-language brief becomes milestones with checkable acceptance criteria, weights and required evidence. Both sides sign the same hashed terms.
+2. **Secure the money.** The client approves a **PayPal authorization**. The money is held, not taken, and the worker sees *Funds secured* before starting.
+3. **Verify the work.** Machine checks, verifier agents and (when needed) a human reviewer decide each criterion using collected evidence.
+4. **Capture exactly what was earned.** A deterministic rule turns the results into an amount. PayPal captures that part, releases the rest back to the client, and pays the worker through **PayPal Payouts**.
+
+> Built for **Build What's Next with PayPal and AI** (2026) by [Elom Labs](https://synchstacksolutionslabs.vercel.app/), Nairobi. Sandbox only: no real money moves.
+
+| | |
+|---|---|
+| Live app (PayPal sandbox) | **https://ahadi-web.onrender.com** |
+| Health check | [`/api/health`](https://ahadi-web.onrender.com/api/health) (database, queue, PayPal, webhook) |
+| MCP endpoint for agents | `https://ahadi-web.onrender.com/mcp` |
+| Statement signing key | [`/.well-known/ahadi-signing-key`](https://ahadi-web.onrender.com/.well-known/ahadi-signing-key) |
+| Docs | [Setup](docs/SETUP.md) · [Spec](docs/SPEC.md) · [Agent prompts](docs/AGENT_PROMPTS.md) · [MCP](docs/MCP.md) · [Status](docs/STATUS.md) |
+| Brand | [`brand/`](brand/) (mark, logo, app icon, animated mark) |
+| License | [MIT](LICENSE) |
+
+## Contents
 
 1. [The problem](#the-problem)
-2. [The solution](#the-solution)
-3. [How it works](#how-it-works)
-4. [Features](#features)
-5. [How Ahadi uses PayPal](#how-ahadi-uses-paypal)
-6. [How Ahadi uses AI (tools used)](#how-ahadi-uses-ai-tools-used)
-7. [Architecture](#architecture)
-8. [Tech stack](#tech-stack)
-9. [Getting started](#getting-started)
-10. [PayPal sandbox setup](#paypal-sandbox-setup)
-11. [Environment variables](#environment-variables)
-12. [Running the demo](#running-the-demo)
+2. [What Ahadi does](#what-ahadi-does)
+3. [How a promise works](#how-a-promise-works)
+4. [A real sandbox run](#a-real-sandbox-run)
+5. [Test it yourself](#test-it-yourself)
+6. [How verification works](#how-verification-works)
+7. [How settlement works](#how-settlement-works)
+8. [How Ahadi uses PayPal](#how-ahadi-uses-paypal)
+9. [How Ahadi uses AI](#how-ahadi-uses-ai)
+10. [Infrastructure: Render, Neon, Upstash](#infrastructure-render-neon-upstash)
+11. [Architecture](#architecture)
+12. [Run it locally](#run-it-locally)
 13. [Using Ahadi from an AI agent (MCP)](#using-ahadi-from-an-ai-agent-mcp)
-14. [Project structure](#project-structure)
-15. [Safety and trust design](#safety-and-trust-design)
-16. [Roadmap](#roadmap)
-17. [Team](#team)
+14. [Safety and trust design](#safety-and-trust-design)
+15. [Known limitations](#known-limitations)
+16. [Project structure](#project-structure)
+17. [Roadmap](#roadmap)
+18. [Team](#team)
 
 ---
 
 ## The problem
 
-Paying a stranger for work is broken — and AI agents are about to make it worse.
+Paying a stranger for work is a trust problem dressed up as a payments problem. Moving money is solved. **Deciding when it should move is not.** Today someone always goes first and carries the risk.
 
-**1. The global freelancer trust gap.** A client in Berlin hires a developer in Nairobi. The client fears paying and getting nothing; the developer fears working and not getting paid. Deals stall on "free trial tasks" and "50% upfront", or retreat to marketplaces that charge 10–20% and lock both sides in.
-
-**2. Disputes are judged too late, on no evidence.** When work goes wrong, a payment provider is asked weeks later: *was this delivered as described?* There was never a shared definition of "done", so it is one person's word against another's.
-
-**3. African earners look suspicious by default.** Cross-border freelance income looks like unexplained inbound money. Freelancers face account reviews and freezes, with no simple way to prove *"this $2,000 was for a real website I really built."*
-
-**4. Agents can pay, but cannot verify.** Agentic commerce lets AI agents buy things. But when an agent hires another agent — or a human — to *do work*, nothing checks the work before money moves. Agents either pay blindly or not at all.
+- **The client pays upfront and hopes.** Once money is sent, the only way back is a chargeback or a dispute: weeks of arguing about what was promised, because there was never a shared definition of "done".
+- **The worker delivers first and hopes.** Freelancers across Africa and beyond finish the job, then chase invoices. Deals stall on "free trial tasks" and "50% upfront", or move to marketplaces that charge 10–20% and lock both sides in.
+- **African earners look suspicious by default.** Cross-border freelance income looks like unexplained inbound money. There is no simple way to prove *"this $2,000 was for a real website I really built."*
+- **AI agents can pay, but cannot verify.** Agents now buy work from people and from other agents. Nothing checks the work before money moves, and nobody wants a model deciding on its own when money leaves an account.
 
 **The common root:** money and proof of work are disconnected.
 
-## The solution
+## What Ahadi does
 
 Ahadi ties every payment to verifiable proof of work.
 
-1. **Terms** — An AI Contract Architect turns a plain-language job ("build me a landing page for my bakery") into milestones with *checkable* acceptance criteria. Both sides approve. Vague terms are flagged before anyone commits.
-2. **Secured money** — The client funds each milestone through PayPal Checkout with an **authorization**: the money is reserved, not yet captured. The worker sees *funds secured* before starting.
-3. **Verified release** — On submission, specialist verifier agents check the work against each criterion and produce an evidence report. Deterministic settlement logic then **captures the full amount, captures a fair partial amount and voids the rest, or releases nothing** — followed by a PayPal Payout to the worker.
+| Layer | What you get |
+|---|---|
+| **Promise engine** | Contract Architect turns a text or voice brief into milestones and weighted, checkable criteria. A Criteria Critic flags vague terms ("modern design") before anyone signs. Versioned terms, hash-checked signatures. |
+| **Secured funding** | PayPal Checkout with `intent: AUTHORIZE` per milestone. Honor-period and expiry tracking with reauthorization, so holds never lapse silently. |
+| **Verification** | Evidence collectors for websites, code, design, writing/research and data; 14 machine checks; verifier agents with confidence scores; a hidden-instruction (prompt injection) scanner; human review for anything uncertain. Live progress over SSE. |
+| **Settlement** | A pure, tested settlement engine computes the release in integer cents. Objection window, accept/object/resubmit, partial capture with `final_capture`, then Payouts with team splits. |
+| **Trust layer** | AI Mediator for disagreements, Risk Analyst plus hard self-dealing rules with payout holds, evidence-pack PDF, hash-chained ledger with daily anchors, the **Ahadi Passport** (verified work history) and Ed25519-signed source-of-funds statements. |
+| **Agent economy** | An MCP server with 9 tools, agent API keys, spending mandates set by a human owner, a marketplace of providers, and a demo research agent ("Kazi"). |
+| **Reach** | WhatsApp concierge, voice briefs, in-app/email/WhatsApp notifications, admin console with an AG Grid ledger, review queue and a read-only Ops Agent. |
 
-Every settled promise adds to the worker's **Ahadi Passport**: a portable, system-generated record of verified, paid work that doubles as a source-of-funds statement.
-
-The whole engine is also exposed as an **MCP server**, so AI agents can hire and pay other agents or humans — with payment released only on verified work, inside spending rules their human owner sets.
-
-## How it works
+## How a promise works
 
 ```mermaid
 sequenceDiagram
@@ -75,351 +98,374 @@ sequenceDiagram
     participant A as Ahadi
     participant P as PayPal
     participant W as Worker
-    participant V as Verifier agents
+    participant V as Verifiers
 
-    C->>A: Describe the job (text / brief / voice)
-    A->>A: Contract Architect → milestones + criteria
-    C->>A: Approve terms
-    W->>A: Approve terms
-    C->>P: Checkout (intent = AUTHORIZE)
-    P-->>A: Authorization created → "Funds secured"
-    W->>A: Submit deliverable (repo / URL / files)
-    A->>V: Verify against signed criteria
-    V-->>A: Per-criterion verdicts + evidence
-    A->>A: Settlement engine computes release %
+    C->>A: Brief (text or voice)
+    A->>A: Contract Architect + Critic → milestones and criteria
+    C->>A: Sign terms (sha256 of the terms body)
+    W->>A: Sign the same hash
+    C->>P: Approve order (intent AUTHORIZE)
+    P-->>A: Authorization → "Funds secured"
+    W->>A: Submit work (URL, repo, file or text)
+    A->>V: Collect evidence, scan for injection, decide each criterion
+    V-->>A: Verdicts with evidence and confidence
+    A->>A: Settlement engine → release %
     C-->>A: Objection window (accept / object)
-    A->>P: Capture (full or partial, final_capture = true)
-    A->>P: Payout to worker (minus platform fee)
-    P-->>W: Funds in PayPal → M-Pesa
-    A->>A: Append to evidence ledger + Passport
+    W-->>A: Accept / resubmit
+    A->>P: Capture earned amount (final_capture = true)
+    A->>P: Payout to worker (minus fees)
+    P-->>A: Webhooks confirm capture and payout
+    A->>A: Ledger event, Passport updated
 ```
 
-## Features
+Milestone states: `DRAFT → AGREED → FUNDED → VERIFYING → (NEEDS_HUMAN) → VERDICT_READY → OBJECTION_WINDOW → SETTLING → SETTLED`, with `RESUBMIT`, `MEDIATION`, `ESCALATED`, `EXPIRED` and `CANCELLED` branches. Every transition is enforced by a state machine in `packages/core` and written to the ledger.
 
-### Layer 1 — Promise engine
-| # | Feature | What it does |
-|---|---|---|
-| 1 | **AI contract builder** | Text, brief upload or voice note (English/Swahili) → milestones, deliverables, deadlines, weighted acceptance criteria. Flags unverifiable terms. In-app negotiation with versioned, hashed terms. |
-| 2 | **Secured funding** | PayPal Checkout with `intent: AUTHORIZE` per milestone. Tracks honor period and expiry; prompts reauthorization so holds never lapse silently. |
-| 3 | **Verifier agents** | Specialists for **websites**, **code**, **design**, **writing/research** and **data**. Each criterion gets `pass / partial / fail`, evidence and a confidence score. Low confidence routes to a human. |
-| 4 | **Smart settlement** | Full pass → objection window → capture. Partial → proposed split with reasons → partial capture, rest released. Fail → fix list and resubmission. Human veto always available; high-value releases need explicit confirmation. |
-| 5 | **Payouts** | PayPal Payouts to the worker, team splits by percentage, and a "what lands in M-Pesa" estimate. |
+## A real sandbox run
 
-### Layer 2 — Trust and compliance
-| # | Feature | What it does |
-|---|---|---|
-| 6 | **AI mediator** | Reads terms, evidence and both sides' arguments; proposes a reasoned resolution before anything becomes a payment dispute. Escalations carry a ready evidence pack. |
-| 7 | **Evidence ledger** | Hash-chained timeline per promise: terms → funded → submitted → verified → released. Exportable PDF. |
-| 8 | **Ahadi Passport** | Shareable record of verified promises, first-pass rate and work types, plus a source-of-funds statement linking each payout to its contract and verification. |
-| 9 | **Injection and fraud guard** | Deliverables are treated as data, never instructions. Hidden-text and injection attempts are detected and shown to the client. Plagiarism, reused work and money-cycling patterns are flagged. |
+These are real PayPal sandbox transactions made through the live app. Each ID was checked against PayPal's API after the run.
 
-### Layer 3 — Agent economy
-| # | Feature | What it does |
-|---|---|---|
-| 10 | **Ahadi MCP server** | `create_promise`, `fund_promise`, `submit_work`, `get_verdict`, `release`, `dispute` — any MCP client can hire verified work. |
-| 11 | **Agent marketplace** | Agents and humans list services with verifiable deliverables and compete on verified track records. |
-| 12 | **Spending mandates** | Owners cap per-job and monthly spend, allowed categories and minimum provider scores. Enforced before funding. |
+**Run 2: AI verification, partial release ($40 → 80%)**
 
-### Layer 4 — Access
-| # | Feature | What it does |
+The worker submitted [`fixtures/bakery-site-v1`](https://ahadi-web.onrender.com/fixtures/bakery-site-v1/), a bakery landing page that scrolls sideways on phones (a 720px "specials" strip).
+
+| Criterion | Weight | Decided by | Result |
+|---|---|---|---|
+| c1 Site is reachable | 15 | machine (`http_ok`) | pass, HTTP 200 |
+| c2 Hero names the bakery | 20 | verifier agent | pass, confidence 0.85 |
+| c3 At least 3 cakes with KES prices | 25 | verifier agent | pass, confidence 0.90 |
+| c4 Contact form submits | 20 | reviewer (no browser on the free host) | pass, POST returned 200 |
+| c5 No sideways scroll at 375px | 20 | reviewer | **fail**, 720px strip overflows |
+
+| Step | PayPal object | Status |
 |---|---|---|
-| 13 | **WhatsApp interface** | Accept terms, submit links, get verdicts and payout notices in WhatsApp. |
-| 14 | **Dashboards** | Client, worker and admin views. Admin ledger built on AG Grid. |
-| 15 | **Platform API** | Agencies and marketplaces embed Ahadi promises in their own products. |
+| Client approves $40.00 | Order `28M66813HM453064Y` | `COMPLETED` (intent `AUTHORIZE`) |
+| Money held | Authorization `7X456514AC2002036` | `CAPTURED` |
+| 80% captured | Capture `71P51220SA722625D` | `COMPLETED`, $32.00, `final_capture: true`, PayPal fee $1.61, net $30.39 |
+| $8.00 released | (remainder of the authorization) | released by `final_capture` |
+| Worker paid | Payout batch `Z3GTHABUQJS56`, item `UTZDU8UBU6LF2` | `SUCCESS`, $29.91 |
+
+$30.39 net − $0.48 platform fee (1.5% of $32.00) = **$29.91** to the worker. The Explainer agent told the client *"you are paying $32.00 … the remaining $8.00 is returned to you"* and told the worker exactly what to fix.
+
+**Run 1: manual verdict, partial release ($400 → 75%)**
+
+| Step | PayPal object | Status |
+|---|---|---|
+| Order | `6VC40814PN698800V` | `COMPLETED` |
+| Authorization | `2GY97725S3048145L` | `CAPTURED` |
+| Capture | `9LF72135AN2545515` | $300.00, `final_capture: true`, fee $10.96, net $289.04 |
+| Payout | batch `TBAD9S6FX2UJ6` | `SUCCESS`, $284.54 |
+
+The promise ledger verified as an intact hash chain (18 events).
+
+## Test it yourself
+
+You can test the whole flow on the hosted app in about ten minutes, without installing anything.
+
+### What you need
+
+- **A PayPal sandbox buyer account** to approve payments. Any sandbox *Personal* account works:
+  1. Sign in at [developer.paypal.com](https://developer.paypal.com/dashboard/) (free) and switch to **Sandbox**.
+  2. Go to **Testing Tools → Sandbox Accounts**. A default `…@personal.example.com` account already exists. Open it, then **View/Edit account** to see its password.
+  3. Use that email and password in the PayPal popup when you fund a promise.
+- A desktop browser. The app also works on phones.
+
+> **Cold start:** the app runs on Render's free plan, which sleeps when idle. The first request can take about a minute; after that it is fast.
+
+### Demo accounts
+
+Open **https://ahadi-web.onrender.com/sign-in**. Demo mode shows three one-click accounts. Use the switcher in the header to move between them.
+
+| Account | Use it to |
+|---|---|
+| **Client** (`client@ahadi.test`) | create promises, fund them with PayPal, accept or object to proposals |
+| **Worker** (`worker@ahadi.test`) | sign terms, submit work, accept proposals, see payouts and the Passport |
+| **Admin** (`admin@ahadi.test`) | review queue, decide criteria that need a person, risk flags, ledger grid, Ops Agent |
+
+### Walkthrough
+
+| # | As | Do this | What you should see |
+|---|---|---|---|
+| 1 | Client | **New promise.** Paste: *"Landing page for my bakery in Nairobi. Show our cakes and prices in KES, people should be able to contact us through a form. Must work well on phones."* Budget $40. | The Contract Architect drafts a milestone with about five weighted criteria (reachable, hero, KES prices, form, no sideways scroll on phones). The Critic's notes appear next to each one. You can apply suggestions or edit by hand. |
+| 2 | Client | **Send invite** to `worker@ahadi.test` and **Sign**. | The terms hash is shown. State: waiting for the worker. |
+| 3 | Worker | Open the promise and **Sign** the same terms. | State becomes `AGREED`; the milestone is ready to fund. |
+| 4 | Client | **Fund with PayPal** and log in with your sandbox buyer. | The PayPal popup shows the amount. After approval the milestone shows **Funds secured** with the authorization ID and its honor period. No money has been captured yet. |
+| 5 | Worker | **Submit work** → URL → `https://ahadi-web.onrender.com/fixtures/bakery-site-v1/` | The live verification screen streams each step: evidence collection, injection scan, then a verdict per criterion. |
+| 6 | Admin | If the milestone says **Needs review**, open **Admin → Review queue**. | Criteria the machine could not decide (on the free host: anything needing a real browser) are waiting. Decide them with a reason. Try the page at 375px yourself: v1 scrolls sideways. |
+| 7 | Client and worker | Open the **proposal**. | A release percentage, the amount to capture, the amount returned, the platform fee and a plain-language explanation for each side. Both **Accept** (or wait for the objection window). |
+| 8 | Anyone | Watch the milestone settle. | `SETTLING` → `SETTLED`. The capture ID, PayPal fee, net and the payout batch appear. The **Ledger** tab shows the hash-chained events and verifies the chain. |
+
+Other things to try:
+
+- **Passing work:** submit `…/fixtures/bakery-site-v2/` instead. It is responsive, so every criterion can pass and 100% is released.
+- **Prompt injection:** submit `…/fixtures/bakery-site-injection/`. The page hides text telling the verifier to approve payment. Ahadi flags it, shows the hidden text to the client, and blocks automatic release until a reviewer looks at it.
+- **Object instead of accepting:** as the client, object to a proposal with a reason. The AI Mediator proposes a resolution both sides can accept or reject.
+- **Agents:** sign in as the client, open **Agents**, use **Create agent and key**, set its spending mandate, and connect an MCP client (see [below](#using-ahadi-from-an-ai-agent-mcp)).
+- **Passport and statements:** as the worker, open **Settings** for the public Passport link and download a signed source-of-funds statement.
+
+### Checking the PayPal side
+
+Every funding, capture and payout ID shown in the app can be looked up in your sandbox: **developer.paypal.com → Testing Tools → Sandbox Accounts → (account) → View transactions**, or with the REST API (`GET /v2/payments/captures/{id}`, `GET /v1/payments/payouts/{batch_id}`). The platform's own reconciliation runs every 15 minutes and on every PayPal webhook.
+
+## How verification works
+
+Each criterion is decided by the cheapest thing that can decide it reliably.
+
+1. **Collect evidence.** Collectors depend on the category: a headless browser for websites (desktop and 375px screenshots, rendered DOM, real form submissions, link checks, page speed, rendered hidden text); repository analysis and sandboxed test runs (E2B or Docker) for code; citation reachability and claim sampling for writing and research; dimensions and palettes for design; schema validation and profiling for data. Everything is stored content-addressed as evidence.
+2. **Scan for hidden instructions.** A deterministic scanner finds hidden or AI-directed text (HTML comments, hidden elements, metadata, zero-width characters). The **Injection Sentinel** agent classifies each finding. Flagged text is stripped, and the stripped version is verified again and compared with the original.
+3. **Machine checks** settle what they can. There are 14: `http_ok`, `lighthouse`, `lcp_ms`, `dom_contains`, `no_horizontal_scroll`, `form_submits`, `test_suite`, `build_succeeds`, `word_count`, `min_citations`, `file_set`, `image_dimensions`, `json_schema` and `csv_columns`.
+4. **Verifier agents** judge the rest (for example "the hero names the bakery"). Every verdict must cite the evidence it used. Borderline results are re-run, and a **Verdict Reviewer** checks the whole set for consistency.
+5. **Uncertainty goes to a person.** Confidence below `MIN_AUTO_CONFIDENCE`, missing evidence, or an injection flag sends the criterion to the review queue. Clients decide taste-based (`human`) criteria themselves; an Ahadi reviewer decides blocked machine and AI criteria.
+6. **Explain.** The **Explainer** writes a short, separate summary for the client and the worker. Code checks that it introduces no amounts that aren't in the settlement facts.
+
+## How settlement works
+
+Weights are fixed when the terms are signed. The settlement engine (`packages/core/src/settlement.ts`) is a pure function, tested with property tests:
+
+```text
+release   = Σ weight × credit        pass = 1, partial = 0.05–0.95, fail = 0
+capture   = floor(amount × release)  integer cents
+returned  = amount − capture         released by final_capture
+platform  = floor(capture × 1.5%)    PLATFORM_FEE_BPS
+payout    = capture − PayPal fee − platform fee
+```
+
+- A **required** criterion that fails blocks release entirely (the worker can resubmit, up to `MAX_ATTEMPTS`).
+- Releases above `HUMAN_CONFIRM_ABOVE_USD` need explicit human confirmation.
+- After the proposal, an **objection window** (`OBJECTION_WINDOW_HOURS`) lets either side object. If nobody objects, it is accepted automatically.
+- A capture of 0% **voids** the authorization. A capture between 0% and 100% uses `final_capture: true`, so PayPal releases the remainder in the same call.
+- **Payouts** go to the worker's PayPal email, or are split across a team by basis points. Payouts can be held by risk rules and released by an admin.
 
 ## How Ahadi uses PayPal
 
-PayPal is the money layer for every promise — not a checkout button bolted on at the end.
+PayPal is the money layer for every promise, not a button bolted on at the end.
 
-| PayPal capability | Where Ahadi uses it |
+| PayPal API | Where Ahadi uses it |
 |---|---|
-| **Orders v2** (`intent: AUTHORIZE`) | Funding each milestone; buyer approves in PayPal Checkout. |
-| **Payments v2 — authorizations** | `capture` (full or partial with `final_capture`), `void`, `reauthorize`, `GET` status for expiry tracking. |
-| **Payments v2 — captures** | `refund` for post-settlement mediation outcomes. |
-| **Payouts v1** | Paying workers and team splits after capture. |
-| **Webhooks** | Source of truth for authorization, capture, payout and dispute state. Signatures verified. |
-| **Disputes v1** | Attaching Ahadi evidence packs when a disagreement escalates to PayPal. |
-| **JavaScript SDK** | PayPal / Venmo / card buttons on the funding page. |
-| **Agent Toolkit / MCP server** | Ops agent for reporting and reconciliation over the merchant account. |
+| **Orders v2** (`intent: AUTHORIZE`) | Funding each milestone; the buyer approves in PayPal Checkout (JS SDK popup or redirect). |
+| **Payments v2: authorizations** | `capture` (full or partial with `final_capture`), `void` (nothing earned or cancelled), `reauthorize` (keep long holds valid), `GET` for honor and expiry tracking. |
+| **Payments v2: captures** | `refund` when a mediation outcome reverses a settled payment. |
+| **Payouts v1** | Paying the worker, or several recipients for team splits, after capture. Reconciled by webhook and on a 15-minute schedule. |
+| **Webhooks** | Source of truth for authorization, capture, payout and dispute events. Every event is checked with `verify-webhook-signature` and processed once. |
+| **Disputes v1** | Reading disputes and attaching Ahadi's evidence pack. |
+| **JavaScript SDK** | PayPal, Venmo and card buttons on the funding page. |
 
-Production path (documented in the spec): PayPal's multiparty platform with **delayed disbursement**, so funds go to the worker as payee and Ahadi never holds client money.
+Every write sends a deterministic `PayPal-Request-Id`, derived from the promise, milestone and action, so retries never double-capture or double-pay. `npm run paypal:check` verifies credentials, the Payouts scope, the webhook, the database and Redis in one go.
 
-## How Ahadi uses AI (tools used)
+**Production path:** PayPal's multiparty platform with *delayed disbursement*, so funds go to the worker as payee and Ahadi never holds client money (needs partner approval; see the [spec](docs/SPEC.md)).
 
-| Tool / model | Role in Ahadi |
+## How Ahadi uses AI
+
+All agents return **structured JSON** validated with Zod, plus code-level checks (for example: a verdict must reference real evidence; an explanation may not invent amounts). Each agent run is logged with its prompt version, model, tokens and latency. **No model ever moves money:** agents produce verdicts, the settlement engine computes amounts, and only the settlement service can call PayPal.
+
+| Agent | Job |
 |---|---|
-| **Claude Opus 5.5** (`claude-opus-5-5`) | Contract Architect, AI Mediator, final review of borderline verdicts. |
-| **Claude Sonnet 5.5** (`claude-sonnet-5-5`) | Verifier agents (web, code, design via vision, writing/research, data), Criteria Critic, Risk Analyst. |
-| **Claude Haiku 5.5** (`claude-haiku-5-5`) | Injection Sentinel, WhatsApp concierge, intent classification, summaries. |
-| **Speech-to-text** (Whisper or Deepgram) | Voice-note job descriptions → text for the Contract Architect. |
-| **Playwright + Lighthouse** | Evidence collection for website verification (screenshots, performance, DOM checks). |
-| **Sandboxed code runner** (Vercel Sandbox or E2B) | Running submitted test suites in isolation. |
-| **Model Context Protocol** | Ahadi's own MCP server, plus PayPal's MCP server for ops. |
+| Contract Architect | Brief → milestones, criteria, weights, evidence requirements |
+| Criteria Critic | Flags vague or unverifiable criteria and suggests checkable rewrites |
+| Injection Sentinel | Classifies hidden text found in submissions |
+| Verifiers | Decide AI-judged criteria from evidence (with vision for screenshots) |
+| Verdict Reviewer | Consistency check across a verification |
+| Explainer | Plain-language summaries for client and worker |
+| Mediator | Proposes resolutions when a party objects |
+| Risk Analyst | Weighs fraud signals; can recommend a payout hold |
+| Concierge / Ops Agent | WhatsApp assistant; read-only admin assistant |
+| Kazi (provider) | Demo research agent sold on the marketplace |
 
-**Model provider.** Agents run through **OpenRouter** (`OPENROUTER_API_KEY`) or the **Anthropic API** (`ANTHROPIC_API_KEY`); set `AI_PROVIDER` to choose. With OpenRouter, the defaults are free models (`nvidia/nemotron-3.5-super-vl:free`, falling back to `google/gemma-4-31b-it:free`); override per role with `OPENROUTER_MODEL_ARCHITECT`, `OPENROUTER_MODEL_VERIFIER`, `OPENROUTER_MODEL_FAST`.
+**Model provider.** Agents run through **[OpenRouter](https://openrouter.ai)** (default) or the **Anthropic API**; set `AI_PROVIDER`. OpenRouter defaults to free models (`nvidia/nemotron-3.5-super-vl:free`, falling back to `google/gemma-4-31b-it:free`), and each role can be overridden with `OPENROUTER_MODEL_ARCHITECT`, `OPENROUTER_MODEL_VERIFIER` and `OPENROUTER_MODEL_FAST`. Speech-to-text for voice briefs uses Whisper or Deepgram.
 
-All model output is structured (tool use with JSON schemas) and validated with Zod. **No model ever moves money directly.** Models produce verdicts; a deterministic settlement engine computes amounts; only the settlement service can call PayPal.
+## Infrastructure: Render, Neon, Upstash
+
+| Service | Role in Ahadi |
+|---|---|
+| **[Render](https://render.com)** | Hosts `ahadi-web` (Frankfurt). One web service runs the Next.js app, the API, the MCP server at `/mcp` and the BullMQ worker (`RUN_WORKER_IN_WEB=true` on the free plan). It auto-deploys from `main` only after CI passes; the build runs database migrations (and, if `SEED_ON_DEPLOY=true`, loads the demo data). Configuration lives in [`render.yaml`](render.yaml). |
+| **[Neon](https://neon.tech)** | Serverless Postgres for everything: promises, terms, results, the ledger, agent runs and evidence files (stored content-addressed as `bytea`). The app uses the pooled connection; migrations use the direct one. |
+| **[Upstash](https://upstash.com)** | Redis over TLS for BullMQ: verification, settlement, payout, webhook and notification jobs, plus scheduled monitors (authorization expiry hourly, payout reconciliation every 15 minutes, objection windows every minute, ledger anchor daily). |
+| **GitHub Actions** | CI on every pull request: lint and format, typecheck, unit tests, integration tests against real Postgres and Redis with a stateful fake PayPal (and real Chromium), production build, and a migration drift check. |
+
+Branching: feature branches → pull request to `develop` → `develop` promoted to `main` by pull request → Render deploys `main`.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
     subgraph Clients
-      WEB[Web app<br/>Next.js]
+      WEB[Browser]
       WA[WhatsApp]
       AG[AI agents<br/>MCP clients]
     end
 
-    subgraph Ahadi
-      API[API routes<br/>Next.js]
-      MCP[MCP server]
-      Q[(Queue<br/>Render Key Value)]
-      WK[Worker<br/>agents + settlement]
-      DB[(Postgres)]
-      OBJ[(Artifact storage)]
+    subgraph Render["Render web service"]
+      APP[Next.js app + API]
+      MCP[MCP server /mcp]
+      WK[BullMQ worker<br/>agents · verification · settlement]
     end
+
+    DB[(Neon Postgres)]
+    Q[(Upstash Redis)]
 
     subgraph External
-      PP[PayPal REST APIs<br/>+ webhooks]
-      CL[Claude API]
-      SB[Code sandbox]
-      BR[Headless browser]
+      PP[PayPal REST + webhooks]
+      LLM[OpenRouter / Anthropic]
+      SB[E2B / Docker sandbox]
+      BR[Headless Chromium]
     end
 
-    WEB --> API
-    WA --> API
-    AG --> MCP --> API
-    API --> DB
-    API --> Q --> WK
+    WEB --> APP
+    WA --> APP
+    AG --> MCP --> APP
+    APP --> DB
+    APP --> Q --> WK
     WK --> DB
-    WK --> OBJ
-    WK --> CL
+    WK --> LLM
     WK --> SB
     WK --> BR
     WK --> PP
-    API --> PP
-    PP -- webhooks --> API
+    APP --> PP
+    PP -- webhooks --> APP
 ```
-
-## Tech stack
 
 | Layer | Technology |
 |---|---|
-| Web + API | Next.js 15 (App Router), TypeScript, Tailwind CSS v4 |
-| Worker | Node.js 20, BullMQ |
-| MCP server | `@modelcontextprotocol/sdk` (Streamable HTTP) |
-| Database | Neon Postgres (pooled for the app, direct for migrations) + Drizzle ORM |
-| Queue / cache | Render Key Value (Redis-compatible) |
-| AI | Anthropic Claude API (`@anthropic-ai/sdk`) |
-| Payments | PayPal REST APIs (sandbox), PayPal JS SDK |
-| Verification | Playwright, Lighthouse, Vercel Sandbox / E2B |
+| Web and API | Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS v4, Geist |
+| Jobs | BullMQ on Redis |
+| Data | Postgres (Neon) with Drizzle ORM and migrations |
+| Payments | PayPal REST APIs (sandbox) and the PayPal JS SDK |
+| Agents | OpenRouter (OpenAI-compatible, `json_schema` output) or the Anthropic SDK; Zod schemas |
+| Verification | Playwright, sharp, E2B or Docker, pdfkit |
+| Agents protocol | `@modelcontextprotocol/sdk` (Streamable HTTP) |
 | Tables | AG Grid Community |
-| Messaging | WhatsApp Cloud API |
-| Hosting | Render (web service, worker, Postgres, Key Value) |
+| Monorepo | npm workspaces + Turborepo, Vitest, ESLint, Prettier |
 
-## Getting started
+## Run it locally
 
-### Prerequisites
-- Node.js 20+
-- npm 10+
-- Redis 7 (`docker compose up -d redis` or any local `redis-server`)
-- A [Neon](https://console.neon.tech) project (free tier is fine)
-- A [PayPal Developer](https://developer.paypal.com/) account
-- An [Anthropic API](https://console.anthropic.com/) key
-
-### Install
+**Prerequisites:** Node.js 20+, npm 10+, Docker (for Redis and Postgres), a [Neon](https://console.neon.tech) project or local Postgres, a [PayPal Developer](https://developer.paypal.com/) account, and an OpenRouter or Anthropic key. Click-by-click instructions for PayPal and Neon are in **[docs/SETUP.md](docs/SETUP.md)**.
 
 ```bash
-git clone https://github.com/<your-org>/ahadi.git
-cd ahadi
-npm install
-cp .env.example .env          # fill in Neon + PayPal — see docs/SETUP.md
+git clone https://github.com/JosephNjorog/Ahadi.git
+```
+
+```bash
+cd Ahadi && npm install
+```
+
+```bash
+cp .env.example .env
+```
+
+Fill in `.env` (every variable is documented inline in [`.env.example`](.env.example)). The essentials:
+
+| Variable | Where it comes from |
+|---|---|
+| `DATABASE_URL`, `DATABASE_URL_UNPOOLED` | Neon pooled and direct connection strings |
+| `REDIS_URL` | `redis://localhost:6379` locally, `rediss://…` on Upstash |
+| `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` | PayPal Developer → Apps & Credentials (sandbox app with Payouts enabled) |
+| `PAYPAL_WEBHOOK_ID` | Printed by `npm run paypal:webhook` |
+| `OPENROUTER_API_KEY` or `ANTHROPIC_API_KEY` | Your model provider |
+| `SESSION_SECRET` | `openssl rand -base64 48` |
+| `DEMO_BUYER_PAYPAL_EMAIL`, `DEMO_WORKER_PAYPAL_EMAIL` | Sandbox personal accounts |
+
+```bash
 docker compose up -d redis
-npm run db:migrate
-npm run db:seed               # demo users + the bakery promise
-npm run paypal:check          # verifies PayPal, Payouts, webhook, DB and Redis
 ```
-
-### Run
 
 ```bash
-npm run dev                   # web (3000) + worker; MCP at http://localhost:3000/mcp
+npm run db:migrate && npm run db:seed
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+```bash
+npm run paypal:check
+```
 
-### Useful scripts
+```bash
+npm run dev
+```
+
+Open http://localhost:3000. PayPal webhooks need a public HTTPS URL; use a tunnel (for example `npx cloudflared tunnel --url http://localhost:3000`), set `APP_URL`, then run `npm run paypal:webhook`.
 
 | Script | What it does |
 |---|---|
-| `npm run dev` | Runs web and worker together |
+| `npm run dev` | Web app and worker together; MCP at `/mcp` |
 | `npm run build` | Builds all apps |
-| `npm run lint` / `npm run typecheck` | ESLint / TypeScript across the monorepo |
-| `npm test` | Unit tests (settlement engine, state machines, ledger chain, PayPal client) |
-| `npm run test:integration` | Money spine end to end against real Postgres + Redis with a stateful fake PayPal |
-| `npm run db:migrate` / `db:generate` / `db:studio` | Drizzle migrations and studio |
-| `npm run db:seed` / `demo:reset` | Seed / reset the demo dataset |
-| `npm run paypal:check` | Verifies credentials, Payouts permission, webhook, DB and Redis |
-| `npm run paypal:webhook` | Registers (or updates) the webhook for your sandbox app |
-
-## PayPal sandbox setup
-
-Full click-by-click guide: **[docs/SETUP.md](docs/SETUP.md#3-paypal-developer-account-sandbox)**. In short:
-
-1. Log in to the [PayPal Developer Dashboard](https://developer.paypal.com/dashboard/) and switch to **Sandbox**.
-2. **Testing Tools → Sandbox Accounts:** create a **Business** account (Ahadi's platform), a **Personal** buyer (client) and a **Personal** worker.
-3. **Apps & Credentials → Create App** (type: Merchant, linked to the Business account). Copy the **Client ID** and **Secret**.
-4. Under the app's **Features**, make sure **Payouts** is enabled.
-5. Put the buyer and worker emails in `.env` (`DEMO_BUYER_PAYPAL_EMAIL`, `DEMO_WORKER_PAYPAL_EMAIL`).
-6. Expose your server over HTTPS (e.g. `npx cloudflared tunnel --url http://localhost:3000`) and set `APP_URL`.
-7. Run `npm run paypal:webhook` and save the printed ID as `PAYPAL_WEBHOOK_ID`. Then `npm run paypal:check`.
-
-## Environment variables
-
-```env
-# App
-APP_URL=http://localhost:3000
-NODE_ENV=development
-SESSION_SECRET=change-me
-
-# Database / queue
-DATABASE_URL=postgres://ahadi:ahadi@localhost:5432/ahadi
-REDIS_URL=redis://localhost:6379
-
-# PayPal (sandbox)
-PAYPAL_ENV=sandbox
-PAYPAL_CLIENT_ID=
-PAYPAL_CLIENT_SECRET=
-PAYPAL_WEBHOOK_ID=
-NEXT_PUBLIC_PAYPAL_CLIENT_ID=
-
-# Anthropic
-ANTHROPIC_API_KEY=
-MODEL_ARCHITECT=claude-opus-5-5
-MODEL_VERIFIER=claude-sonnet-5-5
-MODEL_FAST=claude-haiku-5-5
-
-# Verification
-SANDBOX_PROVIDER=vercel            # vercel | e2b | docker
-SANDBOX_API_KEY=
-ARTIFACT_BUCKET_URL=
-ARTIFACT_BUCKET_KEY=
-
-# Speech-to-text (optional)
-STT_PROVIDER=whisper
-STT_API_KEY=
-
-# WhatsApp (optional)
-WHATSAPP_TOKEN=
-WHATSAPP_PHONE_NUMBER_ID=
-WHATSAPP_VERIFY_TOKEN=
-
-# Policy
-PLATFORM_FEE_BPS=150               # 1.5%
-OBJECTION_WINDOW_HOURS=48          # set to 0.05 for demos
-HUMAN_CONFIRM_ABOVE_USD=1000
-MIN_AUTO_CONFIDENCE=0.80
-
-# Demo
-DEMO_BUYER_EMAIL=
-DEMO_WORKER_EMAIL=
-```
-
-## Running the demo
-
-The seed script creates **"Mama Njeri's Bakery — Landing Page"**, a $400 one-milestone promise with four criteria, and two fixture deliverables.
-
-1. Sign in as **Client** → open the promise → **Fund with PayPal** → approve with the sandbox buyer.
-2. The status shows **Funds secured ($400.00)**.
-3. Switch to **Worker** → **Submit work** → choose `fixtures/bakery-site-v1` (one criterion fails on purpose).
-4. Watch verification run live: three pass, *mobile layout at 375px* fails.
-5. The settlement engine proposes **75% ($300.00)**. Client clicks **Accept split**.
-6. Ahadi captures $300 against the authorization (`final_capture: true`, releasing the remainder) and sends a Payout to the worker.
-7. Submit `fixtures/bakery-site-injection` → the Injection Sentinel flags hidden text telling the verifier to approve.
-8. **Agent demo:** connect Claude Desktop to the MCP server (below) and ask: *"Hire a research agent for a $25 report on the Nairobi cold-chain market. Pay only if it cites at least 8 real sources."*
+| `npm run lint` · `npm run typecheck` · `npm run format:check` | Static checks across the monorepo |
+| `npm test` | Unit tests: settlement engine (property tests), state machines, ledger tamper tests, PayPal client, collectors |
+| `npm run test:integration` | Money flow end to end on real Postgres and Redis with a stateful fake PayPal, plus real-Chromium verification of the fixtures |
+| `npm run db:migrate` · `db:generate` · `db:studio` | Drizzle migrations and studio |
+| `npm run db:seed` · `demo:reset` | Seed or reset the demo data |
+| `npm run paypal:check` · `paypal:webhook` | Verify PayPal setup · register the webhook |
 
 ## Using Ahadi from an AI agent (MCP)
 
-Add to your MCP client config:
+In the app, open **Agents → Create agent and key**, copy the key (it is shown once), set the spending mandate, then add the server to any MCP client:
 
 ```json
 {
   "mcpServers": {
     "ahadi": {
       "type": "http",
-      "url": "http://localhost:3001/mcp",
+      "url": "https://ahadi-web.onrender.com/mcp",
       "headers": { "Authorization": "Bearer <AHADI_AGENT_KEY>" }
     }
   }
 }
 ```
 
-Tools exposed: `search_providers`, `create_promise`, `fund_promise`, `get_promise`, `submit_work`, `get_verdict`, `release`, `dispute`, `get_mandate`. Full schemas are in [docs/SPEC.md](docs/SPEC.md#12-mcp-server).
+Tools: `search_providers`, `create_promise`, `get_promise`, `fund_promise`, `submit_work`, `get_verdict`, `release`, `dispute`, `get_mandate`. Funding beyond the mandate returns a structured `MANDATE_EXCEEDED` error with an owner approval link. Try asking your agent: *"Hire a research agent for a $25 report on the Nairobi cold-chain market. Pay only if it cites at least 8 real sources."* Details in [docs/MCP.md](docs/MCP.md).
+
+## Safety and trust design
+
+- **Models never move money.** Agents return verdicts; the settlement engine computes amounts; only the settlement service calls PayPal.
+- **Deliverables are data, never instructions.** Submissions are wrapped in tagged blocks, scanned for hidden instructions, and verified with flagged text stripped.
+- **People keep the veto.** Objection windows on every release, mediation on objection, explicit confirmation above a threshold.
+- **Low confidence goes to a human.** Nothing below `MIN_AUTO_CONFIDENCE` is released automatically.
+- **Risk holds need evidence.** Hard rules (shared emails or PayPal accounts, circular payments) hold payouts. The Risk Analyst can recommend a hold only when a rule found a medium or high signal; an admin resolves holds with a written note.
+- **Idempotent payments.** Deterministic `PayPal-Request-Id` on every write; webhooks are signature-checked and deduplicated.
+- **Tamper-evident history.** Ledger events form a sha256 hash chain (canonical JSON), anchored daily; statements are Ed25519-signed and verifiable with the public key.
+- **Sandbox only** for this submission.
+
+## Known limitations
+
+- **No browser on the free host.** Render's free native runtime has no Chromium, so on the hosted demo the web collector falls back to fetching HTML. Criteria that need a real browser (screenshots, phone-width scrolling, real form submission) go to the review queue. Locally and in CI, Playwright runs real Chromium and decides them automatically. Fix: a Docker deploy with Chromium.
+- **Free models can over-flag.** With free OpenRouter models, the Injection Sentinel sometimes flags harmless HTML comments. The flag only blocks automatic release; a reviewer can clear it with a note.
+- **Free plan sleeps.** Scheduled monitors pause while the service is asleep and catch up when it wakes. A paid plan with a separate worker is documented in `render.yaml`.
+- Lighthouse scoring, dispute evidence upload on `CUSTOMER.DISPUTE.CREATED`, and admin settlement of escalated milestones are listed in [docs/STATUS.md](docs/STATUS.md).
 
 ## Project structure
 
 ```text
 ahadi/
 ├── apps/
-│   ├── web/                  # Next.js app: UI + API routes + webhooks
-│   ├── worker/               # BullMQ worker: every job in SPEC §17
-│   └── mcp/                  # Ahadi MCP server (also served by web at /mcp)
+│   ├── web/            # Next.js: UI, API routes, webhooks, SSE, /mcp, landing page
+│   ├── worker/         # BullMQ worker: every job and schedule
+│   └── mcp/            # MCP server (served by web at /mcp; standalone on :3001)
 ├── packages/
-│   ├── core/                 # Pure domain: state machines, settlement engine, money, criteria, env
-│   ├── db/                   # Drizzle schema + migrations, Neon-aware pool
-│   ├── ledger/               # Hash-chained evidence ledger (append, verify)
-│   ├── paypal/               # Typed PayPal REST client + webhook verification
-│   ├── queue/                # BullMQ job definitions shared by web and worker
-│   ├── services/             # Domain services (funding, settlement, payouts, webhooks, auth, seed)
-│   ├── agents/               # Prompts, schemas, structured-output runner, agent tasks
-│   └── verifiers/            # Web, code, design, writing, data collectors + injection scanner
-├── scripts/                  # paypal:check, paypal:webhook
-├── fixtures/                 # Demo deliverables (bakery v1/v2/injection, research report)
-├── docs/
-│   ├── SETUP.md
-│   ├── SPEC.md
-│   └── AGENT_PROMPTS.md
-├── .github/workflows/        # CI (lint, typecheck, tests, build) + deploy
-├── docker-compose.yml
-├── render.yaml
-├── .env.example
-├── LICENSE
-└── README.md
+│   ├── core/           # Pure domain: money, state machines, settlement engine, criteria, env
+│   ├── db/             # Drizzle schema, migrations, Neon-aware pool
+│   ├── ledger/         # Hash-chained ledger (append, verify)
+│   ├── paypal/         # Typed PayPal REST client, webhook verification, errors
+│   ├── queue/          # Job payloads and deterministic job IDs
+│   ├── services/       # Domain services: contracts, funding, verification, settlement, payouts, risk…
+│   ├── agents/         # Prompts, schemas, structured-output runner (OpenRouter / Anthropic)
+│   └── verifiers/      # Web, code, design, writing, data collectors; injection scanner; machine checks
+├── fixtures/           # Demo deliverables: bakery v1 / v2 / injection, research report
+├── brand/              # Logo, mark, app icon, animated mark
+├── scripts/            # paypal:check, paypal:webhook
+├── docs/               # SETUP, SPEC, AGENT_PROMPTS, MCP, STATUS
+├── .github/workflows/  # CI
+├── render.yaml         # Render blueprint
+└── docker-compose.yml  # Local Postgres + Redis
 ```
 
-## Safety and trust design
-
-- **Models never move money.** Agents return verdicts; the settlement engine (pure, unit-tested code) computes amounts; only the settlement service holds PayPal credentials for captures and payouts.
-- **Deliverables are data.** All submitted content is wrapped in tagged blocks and scanned by a separate Injection Sentinel before and after verification.
-- **Humans keep the veto.** Every release has an objection window, either side can escalate, and releases above `HUMAN_CONFIRM_ABOVE_USD` require explicit confirmation.
-- **Low confidence → human.** Any criterion below `MIN_AUTO_CONFIDENCE` blocks auto-release.
-- **Idempotent payments.** Every PayPal write uses a `PayPal-Request-Id` derived from the promise, milestone and action.
-- **Tamper-evident history.** Ledger events are hash-chained; any edit breaks the chain.
-- **Sandbox only** for this submission. No real funds move.
-
-## Build status
-
-Built in the phases of [SPEC §25](docs/SPEC.md#25-build-order).
-
-- [x] **Phase 1 — Money spine:** monorepo, full schema on Neon, typed PayPal client, fund page (authorize), webhooks, partial `final_capture`, void, Payouts with splits, reconciliation, authorization monitor, hash-chained ledger, admin manual verdict, CI
-- [x] **Phase 2 — Promise engine:** Contract Architect + Critic, terms editor (Apply suggestion, revisions, versions), hashed signing
-- [x] **Phase 3 — Verification:** web collector (Playwright), injection scanner + Sentinel, machine checks, verifier agents with re-runs and Reviewer, live SSE verification, objection window and decisions
-- [x] **Phase 4 — Trust layer:** code (GitHub + E2B/Docker), writing/research, design and data verifiers; Mediator; Risk Analyst; evidence-pack PDF; Passport and Ed25519-signed statements
-- [x] **Phase 5 — Agent economy:** MCP server (`/mcp`), agent keys, spending mandates, marketplace, signed provider webhooks, Kazi Research Agent
-- [x] **Phase 6 — Reach and polish:** WhatsApp concierge, voice briefs, notifications, AG Grid admin ledger, Ops Agent, Render deployment
-
-## Roadmap (beyond the hackathon)
+## Roadmap
 
 - [ ] PayPal multiparty with delayed disbursement (worker as payee)
-- [ ] Stablecoin payout rail
-- [ ] Platform API with webhooks for partners
+- [ ] Chromium-enabled worker on Render, Lighthouse checks
+- [ ] Pre-approved agent funding with PayPal Vault
+- [ ] Platform API and webhooks for marketplaces and agencies
 - [ ] Verifier plugins for mobile apps, video and translation
-- [ ] Reputation-based funding terms (lower holds for high-trust pairs)
+- [ ] Reputation-based terms (shorter holds for high-trust pairs)
 
 ## Team
 
-**Elom Labs** — Nairobi, Kenya. Software engineering company and technology consultancy.
-[synchstacksolutionslabs.vercel.app](https://synchstacksolutionslabs.vercel.app/)
+**[Elom Labs](https://synchstacksolutionslabs.vercel.app/)**, Nairobi, Kenya: a software engineering company and technology consultancy.
 
 ---
 

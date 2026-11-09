@@ -62,3 +62,151 @@ body {
 .tabular {
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------------------------------------------------------------------------
+   Landing page: a monochrome palette scoped to `.lp`, with its own light/dark
+   switch (data-theme on the .lp root wins over the OS preference).
+--------------------------------------------------------------------------- */
+@theme inline {
+  --color-l-bg: var(--lp-bg);
+  --color-l-bg2: var(--lp-bg2);
+  --color-l-card: var(--lp-card);
+  --color-l-fg: var(--lp-fg);
+  --color-l-muted: var(--lp-muted);
+  --color-l-subtle: var(--lp-subtle);
+  --color-l-line: var(--lp-line);
+  --color-l-line2: var(--lp-line2);
+  --color-l-inv: var(--lp-inv);
+  --color-l-inv-fg: var(--lp-inv-fg);
+  --color-l-ok: var(--lp-ok);
+  --color-l-ok-bg: var(--lp-ok-bg);
+  --color-l-bad: var(--lp-bad);
+  --color-l-bad-bg: var(--lp-bad-bg);
+  --color-l-warn: var(--lp-warn);
+  --font-geist: var(--font-geist-sans);
+  --font-geist-mono: var(--font-geist-mono);
+}
+
+.lp {
+  --lp-bg: #fafafa;
+  --lp-bg2: #f4f4f5;
+  --lp-card: #ffffff;
+  --lp-fg: #0a0a0a;
+  --lp-muted: #5f5f5f;
+  --lp-subtle: #8f8f8f;
+  --lp-line: #e8e8e8;
+  --lp-line2: #d9d9d9;
+  --lp-inv: #0a0a0a;
+  --lp-inv-fg: #fafafa;
+  --lp-ok: #15803d;
+  --lp-ok-bg: #ecfdf3;
+  --lp-bad: #dc2626;
+  --lp-bad-bg: #fef2f2;
+  --lp-warn: #b45309;
+  --lp-shadow: 0 1px 1px rgb(0 0 0 / 0.02), 0 8px 24px -8px rgb(0 0 0 / 0.08);
+  color-scheme: light;
+  background: var(--lp-bg);
+  color: var(--lp-fg);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: normal;
+  letter-spacing: -0.006em;
+}
+
+@media (prefers-color-scheme: dark) {
+  .lp:not([data-theme="light"]) {
+    --lp-bg: #0a0a0a;
+    --lp-bg2: #111111;
+    --lp-card: #141414;
+    --lp-fg: #ededed;
+    --lp-muted: #a1a1a1;
+    --lp-subtle: #6e6e6e;
+    --lp-line: #222222;
+    --lp-line2: #2e2e2e;
+    --lp-inv: #ededed;
+    --lp-inv-fg: #0a0a0a;
+    --lp-ok: #4ade80;
+    --lp-ok-bg: rgb(74 222 128 / 0.1);
+    --lp-bad: #f87171;
+    --lp-bad-bg: rgb(248 113 113 / 0.1);
+    --lp-warn: #fbbf24;
+    --lp-shadow: 0 0 0 1px rgb(255 255 255 / 0.02), 0 12px 32px -12px rgb(0 0 0 / 0.6);
+    color-scheme: dark;
+  }
+}
+.lp[data-theme="dark"] {
+  --lp-bg: #0a0a0a;
+  --lp-bg2: #111111;
+  --lp-card: #141414;
+  --lp-fg: #ededed;
+  --lp-muted: #a1a1a1;
+  --lp-subtle: #6e6e6e;
+  --lp-line: #222222;
+  --lp-line2: #2e2e2e;
+  --lp-inv: #ededed;
+  --lp-inv-fg: #0a0a0a;
+  --lp-ok: #4ade80;
+  --lp-ok-bg: rgb(74 222 128 / 0.1);
+  --lp-bad: #f87171;
+  --lp-bad-bg: rgb(248 113 113 / 0.1);
+  --lp-warn: #fbbf24;
+  --lp-shadow: 0 0 0 1px rgb(255 255 255 / 0.02), 0 12px 32px -12px rgb(0 0 0 / 0.6);
+  color-scheme: dark;
+}
+
+.lp :focus-visible {
+  outline: 2px solid var(--lp-fg);
+  outline-offset: 2px;
+}
+.lp .shadow-l {
+  box-shadow: var(--lp-shadow);
+}
+/* Faint engineering grid behind the hero. */
+.lp .l-grid {
+  background-image:
+    linear-gradient(to right, var(--lp-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--lp-line) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 40%, transparent 100%);
+}
+
+/* Ahadi mark intro: ring draws clockwise, then the dot settles in the centre. */
+@keyframes ahadi-ring-draw {
+  from {
+    stroke-dasharray: 0 100;
+  }
+  to {
+    stroke-dasharray: 84 16;
+  }
+}
+@keyframes ahadi-dot-settle {
+  0%,
+  45% {
+    transform: translateY(-9px) scale(0.4);
+    opacity: 0;
+  }
+  70% {
+    transform: translateY(1px) scale(1.08);
+    opacity: 1;
+  }
+  85% {
+    transform: translateY(-0.5px) scale(0.98);
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+.ahadi-mark-anim .ahadi-ring {
+  animation: ahadi-ring-draw 0.9s cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+.ahadi-mark-anim .ahadi-dot {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ahadi-dot-settle 1.4s cubic-bezier(0.34, 1.3, 0.64, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ahadi-mark-anim .ahadi-ring,
+  .ahadi-mark-anim .ahadi-dot {
+    animation: none;
+  }
+}
