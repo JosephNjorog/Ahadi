@@ -2,7 +2,8 @@
   "name": "ahadi",
   "private": true,
   "version": "0.1.0",
-  "description": "Ahadi — the promise layer for paying for human and AI work, built on PayPal.",
+  "type": "module",
+  "description": "Ahadi \u2014 the promise layer for paying for human and AI work, built on PayPal.",
   "license": "MIT",
   "packageManager": "npm@10.9.0",
   "engines": {
@@ -15,7 +16,7 @@
   "scripts": {
     "dev": "turbo run dev --parallel --filter=@ahadi/web --filter=@ahadi/worker",
     "build": "turbo run build",
-    "typecheck": "turbo run typecheck",
+    "typecheck": "turbo run typecheck && tsc -p scripts/tsconfig.json",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
@@ -45,5 +46,11 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.0",
     "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "@ahadi/db": "*",
+    "@ahadi/paypal": "*",
+    "@ahadi/queue": "*",
+    "drizzle-orm": "^0.44.7"
   }
 }
