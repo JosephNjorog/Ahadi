@@ -25,9 +25,9 @@
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "db:generate": "npm run generate --workspace=@ahadi/db",
     "db:migrate": "npm run migrate --workspace=@ahadi/db",
-    "db:seed": "npm run seed --workspace=@ahadi/db",
+    "db:seed": "npm run seed --workspace=@ahadi/services",
     "db:studio": "npm run studio --workspace=@ahadi/db",
-    "demo:reset": "npm run reset --workspace=@ahadi/db",
+    "demo:reset": "npm run reset --workspace=@ahadi/services",
     "paypal:check": "tsx scripts/paypal-check.ts",
     "paypal:webhook": "tsx scripts/paypal-webhook.ts"
   },
