@@ -14,15 +14,19 @@ import { applyMilestoneEvent } from "./transitions";
  * payout.send (SPEC §6.6): after a capture completes, pay the worker and split recipients.
  * Idempotent: payout rows are keyed by sender_item_id and PayPal dedupes on sender_batch_id.
  */
-export async function sendPayout(settlementId: string): Promise<{ status: "sent" | "already_sent" | "nothing_to_pay" }> {
+export async function sendPayout(
+  settlementId: string,
+): Promise<{ status: "sent" | "already_sent" | "nothing_to_pay" }> {
   const db = getDb();
   const env = getEnv();
   const ctx = await loadSettlementContext(db, settlementId);
   const settlement = ctx.settlement!;
   const { milestone, promise } = ctx;
   if (settlement.status === "PAID") return { status: "already_sent" };
-  if (settlement.status !== "CAPTURED") throw new AppError("CONFLICT", `Settlement is ${settlement.status}, not CAPTURED`);
-  if (settlement.capturedMinor == null || settlement.netMinor == null) throw new AppError("CONFLICT", "Capture amounts not recorded yet");
+  if (settlement.status !== "CAPTURED")
+    throw new AppError("CONFLICT", `Settlement is ${settlement.status}, not CAPTURED`);
+  if (settlement.capturedMinor == null || settlement.netMinor == null)
+    throw new AppError("CONFLICT", "Capture amounts not recorded yet");
 
   const existing = await db.select().from(payouts).where(eq(payouts.settlementId, settlementId));
   if (existing.some((p) => p.paypalPayoutBatchId)) return { status: "already_sent" };
@@ -49,7 +53,9 @@ export async function sendPayout(settlementId: string): Promise<{ status: "sent"
   });
 
   const batchId = idempotencyKeys.payoutBatch(settlementId);
-  const lines = plan.lines.map((l, i) => ({ ...l, senderItemId: idempotencyKeys.payoutItem(settlementId, i) })).filter((l) => l.amountMinor > 0);
+  const lines = plan.lines
+    .map((l, i) => ({ ...l, senderItemId: idempotencyKeys.payoutItem(settlementId, i) }))
+    .filter((l) => l.amountMinor > 0);
 
   if (lines.length === 0) {
     await completeSettlement(settlementId, "nothing_to_pay");
@@ -57,20 +63,26 @@ export async function sendPayout(settlementId: string): Promise<{ status: "sent"
   }
 
   if (existing.length === 0) {
-    await db.insert(payouts).values(
-      lines.map((l) => ({
-        settlementId,
-        recipientPaypalEmail: l.paypalEmail,
-        amountMinor: l.amountMinor,
-        currency: promise.currency,
-        senderBatchId: batchId,
-        senderItemId: l.senderItemId,
-        status: "PENDING" as const,
-      })),
-    ).onConflictDoNothing({ target: payouts.senderItemId });
+    await db
+      .insert(payouts)
+      .values(
+        lines.map((l) => ({
+          settlementId,
+          recipientPaypalEmail: l.paypalEmail,
+          amountMinor: l.amountMinor,
+          currency: promise.currency,
+          senderBatchId: batchId,
+          senderItemId: l.senderItemId,
+          status: "PENDING" as const,
+        })),
+      )
+      .onConflictDoNothing({ target: payouts.senderItemId });
   }
 
-  const criteriaNote = ctx.proposal.releaseBps === 10000 ? "all criteria verified" : `${ctx.proposal.releaseBps / 100}% released after verification`;
+  const criteriaNote =
+    ctx.proposal.releaseBps === 10000
+      ? "all criteria verified"
+      : `${ctx.proposal.releaseBps / 100}% released after verification`;
   const res = await createPayoutBatch(getPayPal(), {
     senderBatchId: batchId,
     emailSubject: "You've been paid through Ahadi",
@@ -105,7 +117,15 @@ export async function sendPayout(settlementId: string): Promise<{ status: "sent"
       },
     });
   });
-  log.info({ promise_id: promise.id, milestone_id: milestone.id, payout_batch_id: payoutBatchId, amount: formatMoney(plan.distributableMinor) }, "payout sent");
+  log.info(
+    {
+      promise_id: promise.id,
+      milestone_id: milestone.id,
+      payout_batch_id: payoutBatchId,
+      amount: formatMoney(plan.distributableMinor),
+    },
+    "payout sent",
+  );
   return { status: "sent" };
 }
 
@@ -166,7 +186,8 @@ export async function applyPayoutItemUpdate(args: {
 export async function maybeCompleteSettlement(settlementId: string) {
   const db = getDb();
   const rows = await db.select().from(payouts).where(eq(payouts.settlementId, settlementId));
-  if (rows.length > 0 && rows.every((r) => r.status === "SUCCESS")) await completeSettlement(settlementId, "paid");
+  if (rows.length > 0 && rows.every((r) => r.status === "SUCCESS"))
+    await completeSettlement(settlementId, "paid");
 }
 
 async function completeSettlement(settlementId: string, reason: "paid" | "nothing_to_pay") {
@@ -187,7 +208,9 @@ async function completeSettlement(settlementId: string, reason: "paid" | "nothin
 }
 
 /** payout.reconcile (every 15 min, SPEC §17): poll batches that still have non-final items. */
-export async function reconcilePayouts(onlySettlementId?: string): Promise<{ batches: number; updated: number }> {
+export async function reconcilePayouts(
+  onlySettlementId?: string,
+): Promise<{ batches: number; updated: number }> {
   const db = getDb();
   const pending = await db
     .select()
@@ -216,7 +239,10 @@ export async function reconcilePayouts(onlySettlementId?: string): Promise<{ bat
         if (res && before && res.status !== before.status) updated++;
       }
     } catch (e) {
-      log.warn({ payout_batch_id: batchId, err: e instanceof PayPalError ? e.toJSON() : String(e) }, "payout reconcile failed");
+      log.warn(
+        { payout_batch_id: batchId, err: e instanceof PayPalError ? e.toJSON() : String(e) },
+        "payout reconcile failed",
+      );
     }
   }
   return { batches: batchIds.length, updated };

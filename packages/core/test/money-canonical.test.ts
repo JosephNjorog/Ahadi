@@ -74,8 +74,27 @@ describe("validateTerms", () => {
         amountMinor: 40_000,
         deliverables: ["site"],
         criteria: [
-          { id: "c1", title: "Up", description: "200", weight: 50, required: true, method: "automated", check: { kind: "http_ok" }, evidence: ["dom_snapshot"], partialCredit: false },
-          { id: "c2", title: "Hero", description: "x", weight: 50, required: false, method: "ai_judgment", evidence: ["screenshot_desktop"], partialCredit: false },
+          {
+            id: "c1",
+            title: "Up",
+            description: "200",
+            weight: 50,
+            required: true,
+            method: "automated",
+            check: { kind: "http_ok" },
+            evidence: ["dom_snapshot"],
+            partialCredit: false,
+          },
+          {
+            id: "c2",
+            title: "Hero",
+            description: "x",
+            weight: 50,
+            required: false,
+            method: "ai_judgment",
+            evidence: ["screenshot_desktop"],
+            partialCredit: false,
+          },
         ],
       },
     ],
@@ -85,7 +104,9 @@ describe("validateTerms", () => {
     const bad = structuredClone(body);
     bad.milestones[0]!.criteria[1]!.weight = 40;
     bad.milestones[0]!.criteria[0]!.check = undefined;
-    const msgs = validateTerms(bad, 50_000).map((i) => i.message).join("|");
+    const msgs = validateTerms(bad, 50_000)
+      .map((i) => i.message)
+      .join("|");
     expect(msgs).toMatch(/budget/);
     expect(msgs).toMatch(/sum to 90/);
     expect(msgs).toMatch(/needs a machine check/);

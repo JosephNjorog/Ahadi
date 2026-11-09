@@ -10,8 +10,13 @@ import { maybeCompleteSettlement } from "./payouts";
 export async function retrySettlement(actor: Actor, settlementId: string) {
   assertAdmin(actor);
   const ctx = await loadSettlementContext(getDb(), settlementId);
-  if (ctx.settlement?.status !== "FAILED") throw new AppError("CONFLICT", "Only failed settlements can be retried");
-  await enqueue("settlement.execute", { proposalId: ctx.proposal.id }, { jobId: `settle-${ctx.proposal.id}-retry-${Date.now()}` });
+  if (ctx.settlement?.status !== "FAILED")
+    throw new AppError("CONFLICT", "Only failed settlements can be retried");
+  await enqueue(
+    "settlement.execute",
+    { proposalId: ctx.proposal.id },
+    { jobId: `settle-${ctx.proposal.id}-retry-${Date.now()}` },
+  );
 }
 
 /** Re-send or re-check a payout. */
@@ -26,8 +31,17 @@ export async function retryPayout(actor: Actor, settlementId: string) {
   await maybeCompleteSettlement(settlementId);
 }
 
-export async function recordJobFailure(args: { queue: string; jobName: string; jobId?: string; data: unknown; error: string; attempts: number }) {
-  await getDb().insert(jobFailures).values({ ...args, data: args.data as Record<string, unknown> });
+export async function recordJobFailure(args: {
+  queue: string;
+  jobName: string;
+  jobId?: string;
+  data: unknown;
+  error: string;
+  attempts: number;
+}) {
+  await getDb()
+    .insert(jobFailures)
+    .values({ ...args, data: args.data as Record<string, unknown> });
 }
 
 export async function resolveJobFailure(actor: Actor, id: string) {

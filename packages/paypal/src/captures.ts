@@ -4,7 +4,10 @@ import type { Capture, Money, Refund } from "./types";
 /** Payments v2 — captures (SPEC §6.5 post-settlement correction). */
 
 export async function getCapture(client: PayPalClient, captureId: string) {
-  return client.request<Capture>({ operation: "captures.get", path: `/v2/payments/captures/${encodeURIComponent(captureId)}` });
+  return client.request<Capture>({
+    operation: "captures.get",
+    path: `/v2/payments/captures/${encodeURIComponent(captureId)}`,
+  });
 }
 
 export async function refundCapture(

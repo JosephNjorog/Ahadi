@@ -12,13 +12,7 @@ export interface Link {
 }
 
 export type AuthorizationStatus =
-  | "CREATED"
-  | "CAPTURED"
-  | "DENIED"
-  | "PARTIALLY_CAPTURED"
-  | "VOIDED"
-  | "PENDING"
-  | "EXPIRED";
+  "CREATED" | "CAPTURED" | "DENIED" | "PARTIALLY_CAPTURED" | "VOIDED" | "PENDING" | "EXPIRED";
 
 export interface Authorization {
   id: string;
@@ -33,7 +27,8 @@ export interface Authorization {
   links?: Link[];
 }
 
-export type CaptureStatus = "COMPLETED" | "DECLINED" | "PARTIALLY_REFUNDED" | "PENDING" | "REFUNDED" | "FAILED";
+export type CaptureStatus =
+  "COMPLETED" | "DECLINED" | "PARTIALLY_REFUNDED" | "PENDING" | "REFUNDED" | "FAILED";
 
 export interface Capture {
   id: string;

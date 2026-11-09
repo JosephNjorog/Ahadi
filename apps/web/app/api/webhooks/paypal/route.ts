@@ -13,13 +13,19 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   const raw = await req.text();
   try {
-    const result = await ingestPayPalWebhook(raw, signatureHeadersFrom((n) => req.headers.get(n)));
+    const result = await ingestPayPalWebhook(
+      raw,
+      signatureHeadersFrom((n) => req.headers.get(n)),
+    );
     return NextResponse.json({ ok: true, ...result });
   } catch (e) {
     if (isAppError(e) && (e.code === "FORBIDDEN" || e.code === "VALIDATION_FAILED")) {
       return NextResponse.json(e.toJSON(), { status: 400 });
     }
     log.error({ err: e instanceof Error ? e.message : String(e) }, "webhook ingest failed");
-    return NextResponse.json({ error: { code: "INTERNAL", message: "Could not accept event" } }, { status: 500 });
+    return NextResponse.json(
+      { error: { code: "INTERNAL", message: "Could not accept event" } },
+      { status: 500 },
+    );
   }
 }

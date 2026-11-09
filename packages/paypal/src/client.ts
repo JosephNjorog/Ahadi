@@ -14,6 +14,7 @@ export interface PayPalLogger {
 }
 
 const jsonLogger: PayPalLogger = {
+  // eslint-disable-next-line no-console -- default structured logger when none is injected
   info: (o, m) => console.log(JSON.stringify({ level: "info", msg: m, ...o })),
   warn: (o, m) => console.warn(JSON.stringify({ level: "warn", msg: m, ...o })),
   error: (o, m) => console.error(JSON.stringify({ level: "error", msg: m, ...o })),
@@ -122,7 +123,12 @@ export class PayPalClient {
         signal: AbortSignal.timeout(this.timeoutMs),
       });
     } catch (e) {
-      throw new PayPalError({ status: 0, name: "NETWORK_ERROR", message: String(e), operation: "oauth.token" });
+      throw new PayPalError({
+        status: 0,
+        name: "NETWORK_ERROR",
+        message: String(e),
+        operation: "oauth.token",
+      });
     }
     const debugId = res.headers.get("paypal-debug-id") ?? undefined;
     const body = (await res.json().catch(() => ({}))) as {
@@ -135,7 +141,9 @@ export class PayPalClient {
       throw new PayPalError({
         status: res.status,
         name: body.error ?? "AUTHENTICATION_FAILURE",
-        message: body.error_description ?? "Could not obtain PayPal access token — check PAYPAL_CLIENT_ID / SECRET and PAYPAL_ENV",
+        message:
+          body.error_description ??
+          "Could not obtain PayPal access token — check PAYPAL_CLIENT_ID / SECRET and PAYPAL_ENV",
         debugId,
         operation: "oauth.token",
       });
@@ -148,9 +156,11 @@ export class PayPalClient {
   /* ─────────────── Generic request ─────────────── */
 
   async request<T>(opts: RequestOptions): Promise<PayPalResponse<T>> {
-    const method = opts.method ?? (opts.body !== undefined || opts.rawJsonBody || opts.formData ? "POST" : "GET");
+    const method =
+      opts.method ?? (opts.body !== undefined || opts.rawJsonBody || opts.formData ? "POST" : "GET");
     const url = new URL(opts.path, this.baseUrl);
-    for (const [k, v] of Object.entries(opts.query ?? {})) if (v !== undefined) url.searchParams.set(k, String(v));
+    for (const [k, v] of Object.entries(opts.query ?? {}))
+      if (v !== undefined) url.searchParams.set(k, String(v));
 
     let lastError: PayPalError | undefined;
     let refreshedToken = false;
@@ -175,9 +185,19 @@ export class PayPalClient {
       const started = Date.now();
       let res: Response;
       try {
-        res = await this.fetchImpl(url, { method, headers, body, signal: AbortSignal.timeout(this.timeoutMs) });
+        res = await this.fetchImpl(url, {
+          method,
+          headers,
+          body,
+          signal: AbortSignal.timeout(this.timeoutMs),
+        });
       } catch (e) {
-        lastError = new PayPalError({ status: 0, name: "NETWORK_ERROR", message: String(e), operation: opts.operation });
+        lastError = new PayPalError({
+          status: 0,
+          name: "NETWORK_ERROR",
+          message: String(e),
+          operation: opts.operation,
+        });
         this.logger.warn({ op: opts.operation, attempt, err: String(e) }, "paypal network error");
         if (attempt < this.maxAttempts) await sleep(this.backoffMs * 2 ** (attempt - 1));
         continue;
@@ -186,12 +206,24 @@ export class PayPalClient {
       const debugId = res.headers.get("paypal-debug-id") ?? undefined;
       const text = await res.text();
       const parsed = text ? safeJson(text) : undefined;
-      const logBase = { op: opts.operation, status: res.status, paypal_debug_id: debugId, ms: Date.now() - started, attempt };
+      const logBase = {
+        op: opts.operation,
+        status: res.status,
+        paypal_debug_id: debugId,
+        ms: Date.now() - started,
+        attempt,
+      };
 
       if (res.ok) {
         this.logger.info(logBase, "paypal ok");
         if (parsed === undefined && !opts.allowEmpty && text) {
-          throw new PayPalError({ status: res.status, name: "INVALID_RESPONSE", message: "Non-JSON response", debugId, operation: opts.operation });
+          throw new PayPalError({
+            status: res.status,
+            name: "INVALID_RESPONSE",
+            message: "Non-JSON response",
+            debugId,
+            operation: opts.operation,
+          });
         }
         return { data: (parsed ?? {}) as T, status: res.status, debugId };
       }
@@ -209,13 +241,25 @@ export class PayPalClient {
       lastError = err;
       if (!isRetryableStatus(res.status) || attempt >= this.maxAttempts) throw err;
       const retryAfter = Number(res.headers.get("retry-after"));
-      await sleep(Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : this.backoffMs * 2 ** (attempt - 1));
+      await sleep(
+        Number.isFinite(retryAfter) && retryAfter > 0
+          ? retryAfter * 1000
+          : this.backoffMs * 2 ** (attempt - 1),
+      );
     }
-    throw lastError ?? new PayPalError({ status: 0, name: "UNKNOWN", message: "exhausted retries", operation: opts.operation });
+    throw (
+      lastError ??
+      new PayPalError({ status: 0, name: "UNKNOWN", message: "exhausted retries", operation: opts.operation })
+    );
   }
 }
 
-function toPayPalError(status: number, body: unknown, debugId: string | undefined, operation: string): PayPalError {
+function toPayPalError(
+  status: number,
+  body: unknown,
+  debugId: string | undefined,
+  operation: string,
+): PayPalError {
   const b = (body ?? {}) as {
     name?: string;
     message?: string;

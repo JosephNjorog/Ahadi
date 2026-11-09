@@ -24,7 +24,12 @@ export const POST = withUser<{ id: string }>(
   async ({ req, actor, params }) => {
     const body = await readJson(req, Body);
     const { proposal, computed } = await submitManualVerdict(actor, { milestoneId: params.id, ...body });
-    return NextResponse.json({ proposalId: proposal.id, releaseBps: computed.releaseBps, captureMinor: computed.captureMinor, kind: computed.kind });
+    return NextResponse.json({
+      proposalId: proposal.id,
+      releaseBps: computed.releaseBps,
+      captureMinor: computed.captureMinor,
+      kind: computed.kind,
+    });
   },
   { admin: true },
 );

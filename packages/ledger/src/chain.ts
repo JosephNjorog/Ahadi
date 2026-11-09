@@ -21,7 +21,9 @@ export function genesisHash(promiseId: string): string {
   return sha256Hex(`ahadi:genesis:${promiseId}`);
 }
 
-export function computeEventHash(e: Omit<ChainEvent, "hash" | "promiseId" | "actor"> & { actor?: string }): string {
+export function computeEventHash(
+  e: Omit<ChainEvent, "hash" | "promiseId" | "actor"> & { actor?: string },
+): string {
   return sha256Hex(
     [e.prevHash, String(e.seq), e.type, canonicalJson(e.payload), e.createdAt.toISOString()].join("\n"),
   );
@@ -36,7 +38,8 @@ export function verifyChain(promiseId: string, events: ChainEvent[]): ChainVerif
   let prev = genesisHash(promiseId);
   for (let i = 0; i < sorted.length; i++) {
     const e = sorted[i]!;
-    if (e.seq !== i + 1) return { valid: false, length: sorted.length, brokenAt: e.seq, reason: "sequence gap" };
+    if (e.seq !== i + 1)
+      return { valid: false, length: sorted.length, brokenAt: e.seq, reason: "sequence gap" };
     if (e.promiseId !== promiseId)
       return { valid: false, length: sorted.length, brokenAt: e.seq, reason: "event from another promise" };
     if (e.prevHash !== prev)

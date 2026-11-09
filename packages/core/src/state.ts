@@ -91,7 +91,11 @@ const MILESTONE_TABLE: Record<MilestoneState, Partial<Record<MilestoneEvent, Mil
   ESCALATED: {},
 };
 
-export const TERMINAL_MILESTONE_STATES: ReadonlySet<MilestoneState> = new Set(["SETTLED", "VOIDED", "ESCALATED"]);
+export const TERMINAL_MILESTONE_STATES: ReadonlySet<MilestoneState> = new Set([
+  "SETTLED",
+  "VOIDED",
+  "ESCALATED",
+]);
 
 /** States in which PayPal is holding (authorized, uncaptured) money for the milestone. */
 export const FUNDS_HELD_STATES: ReadonlySet<MilestoneState> = new Set([

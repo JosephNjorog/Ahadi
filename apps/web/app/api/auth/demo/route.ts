@@ -12,5 +12,8 @@ export const POST = withPublic(async ({ req }) => {
   const { role } = await readJson(req, Body);
   const user = await demoUser(role);
   await setSession(user.id);
-  return NextResponse.json({ ok: true, user: { id: user.id, displayName: user.displayName, role: user.role } });
+  return NextResponse.json({
+    ok: true,
+    user: { id: user.id, displayName: user.displayName, role: user.role },
+  });
 });

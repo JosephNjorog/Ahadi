@@ -2,6 +2,7 @@ import { config } from "dotenv";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { eq, inArray, sql } from "drizzle-orm";
+import type { TermsBody } from "@ahadi/core";
 
 config({ path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../.env") });
 
@@ -9,7 +10,6 @@ const { hashTerms, validateTerms } = await import("@ahadi/core");
 const { getEnv } = await import("@ahadi/core/env");
 const db = await import("@ahadi/db");
 const { appendLedgerEvent } = await import("@ahadi/ledger");
-type TermsBody = import("@ahadi/core").TermsBody;
 
 const { getDb, closeDb, users, promises, termsVersions, signatures, milestones, criteria } = db;
 
@@ -21,7 +21,10 @@ export const BAKERY_TERMS: TermsBody = {
   scopeSummary:
     "A one-page website for Mama Njeri's Bakery in Nairobi that shows the bakery's cakes with prices and lets customers send a message. It must work well on phones.",
   outOfScope: ["Online ordering or payments", "Domain purchase and hosting fees", "Logo design"],
-  assumptions: ["Prices are shown in KES", "The client supplies product photos; stock photos are acceptable until then"],
+  assumptions: [
+    "Prices are shown in KES",
+    "The client supplies product photos; stock photos are acceptable until then",
+  ],
   milestones: [
     {
       position: 1,
@@ -46,7 +49,7 @@ export const BAKERY_TERMS: TermsBody = {
           id: "c2",
           title: "Hero shows bakery name and offer",
           description:
-            "The first screen shows the name \"Mama Njeri's Bakery\" and a one-line description of what it sells, visible without scrolling on desktop (900px) and mobile (812px).",
+            'The first screen shows the name "Mama Njeri\'s Bakery" and a one-line description of what it sells, visible without scrolling on desktop (900px) and mobile (812px).',
           weight: 25,
           required: false,
           method: "ai_judgment",
@@ -56,7 +59,8 @@ export const BAKERY_TERMS: TermsBody = {
         {
           id: "c3",
           title: "Pricing lists at least 5 products in KES",
-          description: "A pricing section lists at least 5 distinct products, each with a name and a price in KES. Placeholder text does not count.",
+          description:
+            "A pricing section lists at least 5 distinct products, each with a name and a price in KES. Placeholder text does not count.",
           weight: 25,
           required: false,
           method: "ai_judgment",
@@ -136,7 +140,8 @@ export async function seed({ resetFirst = false } = {}) {
         workerUserId: worker.id,
         state: "AGREED",
         currency: "USD",
-        sourceBrief: "Landing page for my bakery in Nairobi. Show our cakes and prices, people should be able to contact us. Must work well on phones.",
+        sourceBrief:
+          "Landing page for my bakery in Nairobi. Show our cakes and prices, people should be able to contact us. Must work well on phones.",
       })
       .returning();
     await appendLedgerEvent(tx, {
@@ -150,7 +155,12 @@ export async function seed({ resetFirst = false } = {}) {
       .values({ promiseId: p!.id, version: 1, body: BAKERY_TERMS, bodyHash, authorId: null })
       .returning();
     await tx.update(promises).set({ currentTermsVersionId: tv!.id }).where(eq(promises.id, p!.id));
-    await appendLedgerEvent(tx, { promiseId: p!.id, type: "terms.versioned", actor: "system", payload: { version: 1, bodyHash } });
+    await appendLedgerEvent(tx, {
+      promiseId: p!.id,
+      type: "terms.versioned",
+      actor: "system",
+      payload: { version: 1, bodyHash },
+    });
 
     for (const m of BAKERY_TERMS.milestones) {
       const [row] = await tx
@@ -164,21 +174,52 @@ export async function seed({ resetFirst = false } = {}) {
           maxAttempts: env.MAX_ATTEMPTS,
         })
         .returning();
-      await tx.insert(criteria).values(m.criteria.map((c) => ({ milestoneId: row!.id, key: c.id, spec: c, weight: c.weight, required: c.required })));
+      await tx
+        .insert(criteria)
+        .values(
+          m.criteria.map((c) => ({
+            milestoneId: row!.id,
+            key: c.id,
+            spec: c,
+            weight: c.weight,
+            required: c.required,
+          })),
+        );
     }
 
-    for (const [party, signer] of [["client", client], ["worker", worker]] as const) {
-      await tx.insert(signatures).values({ termsVersionId: tv!.id, party, signerUserId: signer.id, bodyHash });
-      await appendLedgerEvent(tx, { promiseId: p!.id, type: "terms.signed", actor: `user:${signer.id}`, payload: { party, version: 1, bodyHash } });
+    for (const [party, signer] of [
+      ["client", client],
+      ["worker", worker],
+    ] as const) {
+      await tx
+        .insert(signatures)
+        .values({ termsVersionId: tv!.id, party, signerUserId: signer.id, bodyHash });
+      await appendLedgerEvent(tx, {
+        promiseId: p!.id,
+        type: "terms.signed",
+        actor: `user:${signer.id}`,
+        payload: { party, version: 1, bodyHash },
+      });
     }
-    await appendLedgerEvent(tx, { promiseId: p!.id, type: "promise.agreed", actor: "system", payload: { from: "NEGOTIATING", to: "AGREED", bodyHash } });
+    await appendLedgerEvent(tx, {
+      promiseId: p!.id,
+      type: "promise.agreed",
+      actor: "system",
+      payload: { from: "NEGOTIATING", to: "AGREED", bodyHash },
+    });
     return p!.id;
   });
 
-  const ids = await d.select({ id: users.id, email: users.email }).from(users).where(inArray(users.email, [env.DEMO_CLIENT_EMAIL, env.DEMO_WORKER_EMAIL, env.DEMO_ADMIN_EMAIL]));
+  const ids = await d
+    .select({ id: users.id, email: users.email })
+    .from(users)
+    .where(inArray(users.email, [env.DEMO_CLIENT_EMAIL, env.DEMO_WORKER_EMAIL, env.DEMO_ADMIN_EMAIL]));
   console.log("Seeded users:", ids.map((u) => u.email).join(", "));
   console.log(`Seeded promise "${BAKERY_TERMS.title}" (${promiseId}), terms hash ${bodyHash.slice(0, 16)}…`);
-  if (!env.DEMO_WORKER_PAYPAL_EMAIL) console.warn("DEMO_WORKER_PAYPAL_EMAIL is empty — payouts will fail until the worker adds a PayPal email.");
+  if (!env.DEMO_WORKER_PAYPAL_EMAIL)
+    console.warn(
+      "DEMO_WORKER_PAYPAL_EMAIL is empty — payouts will fail until the worker adds a PayPal email.",
+    );
   return promiseId;
 }
 

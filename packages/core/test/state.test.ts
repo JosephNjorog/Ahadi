@@ -71,7 +71,10 @@ describe("milestone state machine", () => {
         const s = queue.shift()!;
         for (const e of milestoneEventsFrom(s)) {
           const n = nextMilestoneState(s, e)!;
-          if (!seen.has(n)) (seen.add(n), queue.push(n));
+          if (!seen.has(n)) {
+            seen.add(n);
+            queue.push(n);
+          }
         }
       }
       expect([...seen].some((s) => TERMINAL_MILESTONE_STATES.has(s))).toBe(true);

@@ -40,7 +40,10 @@ export async function createAuthorizeOrder(client: PayPalClient, input: CreateOr
 }
 
 export async function getOrder(client: PayPalClient, orderId: string) {
-  return client.request<Order>({ operation: "orders.get", path: `/v2/checkout/orders/${encodeURIComponent(orderId)}` });
+  return client.request<Order>({
+    operation: "orders.get",
+    path: `/v2/checkout/orders/${encodeURIComponent(orderId)}`,
+  });
 }
 
 /** POST /v2/checkout/orders/{id}/authorize — empty body. */

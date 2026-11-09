@@ -3,7 +3,15 @@
 import { useState } from "react";
 import { Alert, Button } from "@/components/ui";
 
-export function SignInForm({ next, demoMode, initialError }: { next: string; demoMode: boolean; initialError: string | null }) {
+export function SignInForm({
+  next,
+  demoMode,
+  initialError,
+}: {
+  next: string;
+  demoMode: boolean;
+  initialError: string | null;
+}) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
   const [error, setError] = useState<string | null>(initialError);
@@ -18,7 +26,11 @@ export function SignInForm({ next, demoMode, initialError }: { next: string; dem
       return;
     }
     setStatus("sending");
-    const res = await fetch("/api/auth/magic-link", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, next }) });
+    const res = await fetch("/api/auth/magic-link", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, next }),
+    });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
       setStatus("idle");
@@ -32,7 +44,11 @@ export function SignInForm({ next, demoMode, initialError }: { next: string; dem
   async function demo(role: string) {
     setDemoLoading(role);
     setError(null);
-    const res = await fetch("/api/auth/demo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role }) });
+    const res = await fetch("/api/auth/demo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role }),
+    });
     if (!res.ok) {
       setDemoLoading(null);
       setError((await res.json().catch(() => null))?.error?.message ?? "Demo sign-in failed");
@@ -45,7 +61,8 @@ export function SignInForm({ next, demoMode, initialError }: { next: string; dem
     return (
       <div className="mt-5 space-y-3">
         <Alert tone="brand" title="Check your email">
-          We sent a sign-in link to <strong className="text-ink">{email}</strong>. It works once and expires in 15 minutes.
+          We sent a sign-in link to <strong className="text-ink">{email}</strong>. It works once and expires
+          in 15 minutes.
         </Alert>
         {devLink ? (
           <Alert tone="warn" title="Development: email isn't configured">
@@ -93,7 +110,15 @@ export function SignInForm({ next, demoMode, initialError }: { next: string; dem
           <p className="text-xs font-medium uppercase tracking-wide text-ink-subtle">Demo accounts</p>
           <div className="mt-2 grid grid-cols-3 gap-2">
             {["client", "worker", "admin"].map((r) => (
-              <Button key={r} variant="secondary" size="sm" loading={demoLoading === r} disabled={Boolean(demoLoading)} onClick={() => void demo(r)} className="capitalize">
+              <Button
+                key={r}
+                variant="secondary"
+                size="sm"
+                loading={demoLoading === r}
+                disabled={Boolean(demoLoading)}
+                onClick={() => void demo(r)}
+                className="capitalize"
+              >
                 {r}
               </Button>
             ))}

@@ -4,7 +4,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: { default: "Ahadi — paid when the work is verified", template: "%s · Ahadi" },
-  description: "Ahadi turns every payment for work into a promise: terms agreed in advance, funds secured through PayPal, money released only when the work is verified.",
+  description:
+    "Ahadi turns every payment for work into a promise: terms agreed in advance, funds secured through PayPal, money released only when the work is verified.",
   applicationName: "Ahadi",
 };
 

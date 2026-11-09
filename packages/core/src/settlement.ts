@@ -79,11 +79,13 @@ export function normaliseCreditPct(outcome: Outcome, credit: number, partialCred
 
 export function computeProposal(i: SettlementInput): ComputedProposal {
   assertMinor(i.milestoneAmountMinor, "milestoneAmountMinor");
-  if (i.milestoneAmountMinor <= 0) throw new AppError("VALIDATION_FAILED", "Milestone amount must be positive");
+  if (i.milestoneAmountMinor <= 0)
+    throw new AppError("VALIDATION_FAILED", "Milestone amount must be positive");
   if (i.criteria.length === 0) throw new AppError("VALIDATION_FAILED", "Milestone has no criteria");
 
   const weightSum = i.criteria.reduce((s, c) => s + c.weight, 0);
-  if (weightSum !== 100) throw new AppError("VALIDATION_FAILED", `Criterion weights sum to ${weightSum}, not 100`);
+  if (weightSum !== 100)
+    throw new AppError("VALIDATION_FAILED", `Criterion weights sum to ${weightSum}, not 100`);
   for (const c of i.criteria) {
     if (!Number.isInteger(c.weight) || c.weight < 0)
       throw new AppError("VALIDATION_FAILED", `Bad weight on ${c.id}`);
@@ -207,7 +209,8 @@ export function computePayoutPlan(args: {
   if (netMinor > capturedMinor) throw new AppError("VALIDATION_FAILED", "Net cannot exceed captured amount");
   if (recipients.length === 0) throw new AppError("VALIDATION_FAILED", "No payout recipients");
   const shareSum = recipients.reduce((s, r) => s + r.shareBps, 0);
-  if (shareSum !== 10000) throw new AppError("VALIDATION_FAILED", `Split shares sum to ${shareSum} bps, not 10000`);
+  if (shareSum !== 10000)
+    throw new AppError("VALIDATION_FAILED", `Split shares sum to ${shareSum} bps, not 10000`);
 
   const platformFeeMinor = applyBps(capturedMinor, platformFeeBps);
   const distributableMinor = Math.max(0, netMinor - platformFeeMinor);
@@ -223,6 +226,10 @@ export function computePayoutPlan(args: {
 }
 
 /** "What lands in M-Pesa" estimate (SPEC §6.6). Clearly an estimate, not a quote. */
-export function estimateMpesaKes(distributableMinor: number, kesPerUsd: number, withdrawalFeeRate = 0.03): number {
+export function estimateMpesaKes(
+  distributableMinor: number,
+  kesPerUsd: number,
+  withdrawalFeeRate = 0.03,
+): number {
   return Math.floor((distributableMinor / 100) * kesPerUsd * (1 - withdrawalFeeRate));
 }

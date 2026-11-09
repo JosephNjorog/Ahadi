@@ -18,7 +18,10 @@ export function getPayPal(): PayPalClient {
   if (g.__ahadiPayPal) return g.__ahadiPayPal;
   const env = getEnv();
   if (!paypalConfigured(env)) {
-    throw new AppError("CONFIG_MISSING", "PayPal is not configured. Set PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET (docs/SETUP.md).");
+    throw new AppError(
+      "CONFIG_MISSING",
+      "PayPal is not configured. Set PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET (docs/SETUP.md).",
+    );
   }
   g.__ahadiPayPal = new PayPalClient({
     clientId: env.PAYPAL_CLIENT_ID!,

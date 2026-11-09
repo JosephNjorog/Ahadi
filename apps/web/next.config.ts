@@ -12,10 +12,18 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   output: "standalone",
   outputFileTracingRoot: path.resolve(here, "../.."),
-  transpilePackages: ["@ahadi/core", "@ahadi/db", "@ahadi/ledger", "@ahadi/paypal", "@ahadi/queue", "@ahadi/services"],
+  transpilePackages: [
+    "@ahadi/core",
+    "@ahadi/db",
+    "@ahadi/ledger",
+    "@ahadi/paypal",
+    "@ahadi/queue",
+    "@ahadi/services",
+  ],
   serverExternalPackages: ["pg", "pino", "bullmq", "ioredis"],
   env: {
-    NEXT_PUBLIC_PAYPAL_CLIENT_ID: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || process.env.PAYPAL_CLIENT_ID || "",
+    NEXT_PUBLIC_PAYPAL_CLIENT_ID:
+      process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || process.env.PAYPAL_CLIENT_ID || "",
   },
   async headers() {
     return [

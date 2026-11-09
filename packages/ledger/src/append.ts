@@ -17,7 +17,9 @@ export interface AppendInput {
  * `SELECT … FOR UPDATE` on the promise row serialises concurrent appends for the same promise.
  */
 export async function appendLedgerEvent(tx: DbOrTx, input: AppendInput): Promise<LedgerEvent> {
-  const locked = await tx.execute(sql`select id from ${promises} where ${promises.id} = ${input.promiseId} for update`);
+  const locked = await tx.execute(
+    sql`select id from ${promises} where ${promises.id} = ${input.promiseId} for update`,
+  );
   if (locked.rows.length === 0) throw new AppError("NOT_FOUND", `Promise ${input.promiseId} not found`);
 
   const [last] = await tx
@@ -37,13 +39,26 @@ export async function appendLedgerEvent(tx: DbOrTx, input: AppendInput): Promise
 
   const [row] = await tx
     .insert(ledgerEvents)
-    .values({ promiseId: input.promiseId, seq, type: input.type, actor: input.actor, payload, prevHash, hash, createdAt })
+    .values({
+      promiseId: input.promiseId,
+      seq,
+      type: input.type,
+      actor: input.actor,
+      payload,
+      prevHash,
+      hash,
+      createdAt,
+    })
     .returning();
   return row!;
 }
 
 export async function getLedger(db: DbOrTx, promiseId: string): Promise<LedgerEvent[]> {
-  return db.select().from(ledgerEvents).where(eq(ledgerEvents.promiseId, promiseId)).orderBy(asc(ledgerEvents.seq));
+  return db
+    .select()
+    .from(ledgerEvents)
+    .where(eq(ledgerEvents.promiseId, promiseId))
+    .orderBy(asc(ledgerEvents.seq));
 }
 
 export async function verifyLedger(db: DbOrTx, promiseId: string) {

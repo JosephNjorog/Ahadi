@@ -31,7 +31,9 @@ export default async function LedgerPage({ params }: { params: Promise<{ id: str
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Evidence ledger</h1>
-          <p className="mt-1 text-sm text-ink-muted">Every step is hash-chained to the one before it. Editing any event breaks the chain.</p>
+          <p className="mt-1 text-sm text-ink-muted">
+            Every step is hash-chained to the one before it. Editing any event breaks the chain.
+          </p>
         </div>
         <VerifyChainButton promiseId={id} />
       </div>
@@ -55,7 +57,10 @@ export default async function LedgerPage({ params }: { params: Promise<{ id: str
             <ol className="relative space-y-5 border-l border-line pl-6">
               {events.map((e) => (
                 <li key={e.id} className="relative">
-                  <span className="absolute -left-[31px] top-1 flex size-4 items-center justify-center rounded-full border-2 border-surface bg-brand-500" aria-hidden="true" />
+                  <span
+                    className="absolute -left-[31px] top-1 flex size-4 items-center justify-center rounded-full border-2 border-surface bg-brand-500"
+                    aria-hidden="true"
+                  />
                   <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                     <span className="tabular font-mono text-xs text-ink-subtle">#{e.seq}</span>
                     <span className="font-medium">{e.type}</span>
@@ -67,7 +72,9 @@ export default async function LedgerPage({ params }: { params: Promise<{ id: str
                     <summary className="cursor-pointer text-xs text-ink-subtle">
                       hash {shortHash(e.hash, 16)} · prev {shortHash(e.prevHash, 10)}
                     </summary>
-                    <pre className="mt-2 max-h-64 overflow-auto rounded-lg bg-canvas p-3 text-xs">{JSON.stringify(e.payload, null, 2)}</pre>
+                    <pre className="mt-2 max-h-64 overflow-auto rounded-lg bg-canvas p-3 text-xs">
+                      {JSON.stringify(e.payload, null, 2)}
+                    </pre>
                   </details>
                 </li>
               ))}

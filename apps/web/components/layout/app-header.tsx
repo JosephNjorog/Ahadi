@@ -22,10 +22,16 @@ export function AppHeader({ user }: { user: User }) {
         </div>
         <div className="ml-auto flex items-center gap-2">
           {env.PAYPAL_ENV === "sandbox" ? (
-            <span className="hidden rounded-md bg-warn-50 px-2 py-0.5 text-xs font-medium text-warn-600 sm:inline">PayPal sandbox</span>
+            <span className="hidden rounded-md bg-warn-50 px-2 py-0.5 text-xs font-medium text-warn-600 sm:inline">
+              PayPal sandbox
+            </span>
           ) : null}
           {env.DEMO_MODE ? <DemoSwitcher currentEmail={user.email} /> : null}
-          <Link href="/settings" className="hidden max-w-40 truncate text-sm text-ink-muted hover:text-ink md:block" title={user.email}>
+          <Link
+            href="/settings"
+            className="hidden max-w-40 truncate text-sm text-ink-muted hover:text-ink md:block"
+            title={user.email}
+          >
             {user.displayName}
           </Link>
           <SignOutButton />

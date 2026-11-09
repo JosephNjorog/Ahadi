@@ -265,10 +265,20 @@ describe("computePayoutPlan", () => {
 
   it("rejects bad shares and net > captured", () => {
     expect(() =>
-      computePayoutPlan({ capturedMinor: 10, netMinor: 11, platformFeeBps: 0, recipients: [{ paypalEmail: "a", shareBps: 10000 }] }),
+      computePayoutPlan({
+        capturedMinor: 10,
+        netMinor: 11,
+        platformFeeBps: 0,
+        recipients: [{ paypalEmail: "a", shareBps: 10000 }],
+      }),
     ).toThrow();
     expect(() =>
-      computePayoutPlan({ capturedMinor: 10, netMinor: 10, platformFeeBps: 0, recipients: [{ paypalEmail: "a", shareBps: 9000 }] }),
+      computePayoutPlan({
+        capturedMinor: 10,
+        netMinor: 10,
+        platformFeeBps: 0,
+        recipients: [{ paypalEmail: "a", shareBps: 9000 }],
+      }),
     ).toThrow(/10000/);
   });
 });

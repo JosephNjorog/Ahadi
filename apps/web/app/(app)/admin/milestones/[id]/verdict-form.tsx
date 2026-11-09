@@ -8,13 +8,36 @@ import { Alert, Badge, Button, Card, CardBody, CardHeader } from "@/components/u
 import { cn } from "@/components/ui/cn";
 import { formatMoney } from "@/lib/format";
 
-type C = { key: string; title: string; description: string; weight: number; required: boolean; partialCredit: boolean };
+type C = {
+  key: string;
+  title: string;
+  description: string;
+  weight: number;
+  required: boolean;
+  partialCredit: boolean;
+};
 type Outcome = "pass" | "partial" | "fail";
 
-export function VerdictForm({ milestoneId, promiseId, amountMinor, currency, policy, criteria }: { milestoneId: string; promiseId: string; amountMinor: number; currency: string; policy: SettlementPolicy; criteria: C[] }) {
+export function VerdictForm({
+  milestoneId,
+  promiseId,
+  amountMinor,
+  currency,
+  policy,
+  criteria,
+}: {
+  milestoneId: string;
+  promiseId: string;
+  amountMinor: number;
+  currency: string;
+  policy: SettlementPolicy;
+  criteria: C[];
+}) {
   const router = useRouter();
   const [state, setState] = useState<Record<string, { outcome: Outcome; credit: number; reasoning: string }>>(
-    Object.fromEntries(criteria.map((c) => [c.key, { outcome: "pass" as Outcome, credit: 0.5, reasoning: "" }])),
+    Object.fromEntries(
+      criteria.map((c) => [c.key, { outcome: "pass" as Outcome, credit: 0.5, reasoning: "" }]),
+    ),
   );
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -26,8 +49,18 @@ export function VerdictForm({ milestoneId, promiseId, amountMinor, currency, pol
     () =>
       computeProposal({
         milestoneAmountMinor: amountMinor,
-        criteria: criteria.map((c) => ({ id: c.key, weight: c.weight, required: c.required, partialCredit: c.partialCredit })),
-        results: criteria.map((c) => ({ criterionId: c.key, outcome: state[c.key]!.outcome, credit: state[c.key]!.credit, confidence: 1 })),
+        criteria: criteria.map((c) => ({
+          id: c.key,
+          weight: c.weight,
+          required: c.required,
+          partialCredit: c.partialCredit,
+        })),
+        results: criteria.map((c) => ({
+          criterionId: c.key,
+          outcome: state[c.key]!.outcome,
+          credit: state[c.key]!.credit,
+          confidence: 1,
+        })),
         injectionFlagged: false,
         policy,
       }),
@@ -90,7 +123,11 @@ export function VerdictForm({ milestoneId, promiseId, amountMinor, currency, pol
                   <span className="tabular ml-auto text-xs text-ink-muted">weight {c.weight}</span>
                 </div>
                 <p className="mt-1 text-sm text-ink-muted">{c.description}</p>
-                <div className="mt-3 flex flex-wrap gap-2" role="radiogroup" aria-label={`Outcome for ${c.title}`}>
+                <div
+                  className="mt-3 flex flex-wrap gap-2"
+                  role="radiogroup"
+                  aria-label={`Outcome for ${c.title}`}
+                >
                   {(["pass", ...(c.partialCredit ? ["partial"] : []), "fail"] as Outcome[]).map((o) => (
                     <button
                       key={o}
@@ -114,7 +151,14 @@ export function VerdictForm({ milestoneId, promiseId, amountMinor, currency, pol
                   ))}
                   {s.outcome === "partial" ? (
                     <label className="flex items-center gap-2 text-sm">
-                      <input type="range" min={5} max={95} step={5} value={Math.round(s.credit * 100)} onChange={(e) => set({ credit: Number(e.target.value) / 100 })} />
+                      <input
+                        type="range"
+                        min={5}
+                        max={95}
+                        step={5}
+                        value={Math.round(s.credit * 100)}
+                        onChange={(e) => set({ credit: Number(e.target.value) / 100 })}
+                      />
                       <span className="tabular w-10">{Math.round(s.credit * 100)}%</span>
                     </label>
                   ) : null}
@@ -133,7 +177,10 @@ export function VerdictForm({ milestoneId, promiseId, amountMinor, currency, pol
       </Card>
 
       <Card>
-        <CardHeader title="Settlement preview" description="Computed by the deterministic settlement engine" />
+        <CardHeader
+          title="Settlement preview"
+          description="Computed by the deterministic settlement engine"
+        />
         <CardBody className="space-y-3">
           <div className="flex flex-wrap items-end gap-6">
             <div>
@@ -150,11 +197,22 @@ export function VerdictForm({ milestoneId, promiseId, amountMinor, currency, pol
             </dl>
           </div>
           {preview.kind === "zero" ? (
-            <Alert tone="warn" title={preview.blockedReason === "required_failed" ? "A required criterion failed" : "Nothing to release"}>
+            <Alert
+              tone="warn"
+              title={
+                preview.blockedReason === "required_failed"
+                  ? "A required criterion failed"
+                  : "Nothing to release"
+              }
+            >
               Ahadi will void the PayPal authorization; the full hold goes back to the client.
             </Alert>
           ) : null}
-          {preview.requiresHumanConfirm ? <Alert tone="warn" title="Above the human-confirmation threshold">You are confirming a high-value release.</Alert> : null}
+          {preview.requiresHumanConfirm ? (
+            <Alert tone="warn" title="Above the human-confirmation threshold">
+              You are confirming a high-value release.
+            </Alert>
+          ) : null}
           <label className="block">
             <span className="text-sm font-medium">Note for the ledger</span>
             <textarea
@@ -168,10 +226,20 @@ export function VerdictForm({ milestoneId, promiseId, amountMinor, currency, pol
               placeholder="e.g. Sandbox Phase 1 test — mobile layout overflows at 375px"
             />
           </label>
-          {error ? <Alert tone="danger" title="Not recorded">{error}</Alert> : null}
+          {error ? (
+            <Alert tone="danger" title="Not recorded">
+              {error}
+            </Alert>
+          ) : null}
           <div className="flex flex-wrap items-center gap-3">
-            <Button onClick={() => void submit()} loading={submitting} variant={confirm ? "danger" : "primary"}>
-              {confirm ? `Confirm: ${preview.captureMinor > 0 ? `capture ${formatMoney(preview.captureMinor, currency)}` : "void the hold"}` : "Record verdict and settle"}
+            <Button
+              onClick={() => void submit()}
+              loading={submitting}
+              variant={confirm ? "danger" : "primary"}
+            >
+              {confirm
+                ? `Confirm: ${preview.captureMinor > 0 ? `capture ${formatMoney(preview.captureMinor, currency)}` : "void the hold"}`
+                : "Record verdict and settle"}
             </Button>
             {confirm ? (
               <Button variant="ghost" onClick={() => setConfirm(false)}>

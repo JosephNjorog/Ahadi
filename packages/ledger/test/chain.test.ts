@@ -8,7 +8,15 @@ function build(n: number): ChainEvent[] {
   const out: ChainEvent[] = [];
   let prev = genesisHash(PID);
   for (let seq = 1; seq <= n; seq++) {
-    const e = { promiseId: PID, seq, type: `t.${seq}`, actor: "system", payload: { n: seq, nested: { b: 2, a: 1 } }, prevHash: prev, createdAt: new Date(1_700_000_000_000 + seq) };
+    const e = {
+      promiseId: PID,
+      seq,
+      type: `t.${seq}`,
+      actor: "system",
+      payload: { n: seq, nested: { b: 2, a: 1 } },
+      prevHash: prev,
+      createdAt: new Date(1_700_000_000_000 + seq),
+    };
     const hash = computeEventHash(e);
     out.push({ ...e, hash });
     prev = hash;
@@ -51,7 +59,9 @@ describe("ledger chain", () => {
 
   it("is independent of payload key order", () => {
     const base = { prevHash: "x", seq: 1, type: "t", createdAt: new Date(5) };
-    expect(computeEventHash({ ...base, payload: { a: 1, b: 2 } })).toBe(computeEventHash({ ...base, payload: { b: 2, a: 1 } }));
+    expect(computeEventHash({ ...base, payload: { a: 1, b: 2 } })).toBe(
+      computeEventHash({ ...base, payload: { b: 2, a: 1 } }),
+    );
   });
 
   it("masks emails", () => {

@@ -24,10 +24,21 @@ import { assertCanView, isAdmin, partyRole, type Actor } from "./actor";
 export async function listPromisesForActor(actor: Actor) {
   if (actor.kind !== "user") throw new AppError("UNAUTHENTICATED", "Sign in");
   const db = getDb();
-  const where = isAdmin(actor) ? undefined : or(eq(promises.clientUserId, actor.user.id), eq(promises.workerUserId, actor.user.id));
+  const where = isAdmin(actor)
+    ? undefined
+    : or(eq(promises.clientUserId, actor.user.id), eq(promises.workerUserId, actor.user.id));
   const rows = await db.select().from(promises).where(where).orderBy(desc(promises.updatedAt));
   if (rows.length === 0) return [];
-  const ms = await db.select().from(milestones).where(inArray(milestones.promiseId, rows.map((r) => r.id))).orderBy(asc(milestones.position));
+  const ms = await db
+    .select()
+    .from(milestones)
+    .where(
+      inArray(
+        milestones.promiseId,
+        rows.map((r) => r.id),
+      ),
+    )
+    .orderBy(asc(milestones.position));
   const people = await peopleById(rows.flatMap((r) => [r.clientUserId, r.workerUserId]));
   return rows.map((p) => {
     const own = ms.filter((m) => m.promiseId === p.id);
@@ -37,7 +48,9 @@ export async function listPromisesForActor(actor: Actor) {
       client: p.clientUserId ? people.get(p.clientUserId) : undefined,
       worker: p.workerUserId ? people.get(p.workerUserId) : undefined,
       totalMinor: own.reduce((s, m) => s + m.amountMinor, 0),
-      heldMinor: own.filter((m) => FUNDS_HELD_STATES.has(m.state as MilestoneState)).reduce((s, m) => s + m.amountMinor, 0),
+      heldMinor: own
+        .filter((m) => FUNDS_HELD_STATES.has(m.state as MilestoneState))
+        .reduce((s, m) => s + m.amountMinor, 0),
       milestones: own,
     };
   });
@@ -45,9 +58,15 @@ export async function listPromisesForActor(actor: Actor) {
 
 async function peopleById(ids: (string | null)[]) {
   const unique = [...new Set(ids.filter(Boolean) as string[])];
-  if (!unique.length) return new Map<string, { id: string; displayName: string; email: string; paypalEmail: string | null }>();
+  if (!unique.length)
+    return new Map<string, { id: string; displayName: string; email: string; paypalEmail: string | null }>();
   const rows = await getDb()
-    .select({ id: users.id, displayName: users.displayName, email: users.email, paypalEmail: users.paypalEmail })
+    .select({
+      id: users.id,
+      displayName: users.displayName,
+      email: users.email,
+      paypalEmail: users.paypalEmail,
+    })
     .from(users)
     .where(inArray(users.id, unique));
   return new Map(rows.map((r) => [r.id, r]));
@@ -60,28 +79,58 @@ export async function getPromiseDetail(actor: Actor, promiseId: string) {
   if (!p) throw new AppError("NOT_FOUND", "Promise not found");
   assertCanView(actor, p);
 
-  const ms = await db.select().from(milestones).where(eq(milestones.promiseId, p.id)).orderBy(asc(milestones.position));
+  const ms = await db
+    .select()
+    .from(milestones)
+    .where(eq(milestones.promiseId, p.id))
+    .orderBy(asc(milestones.position));
   const msIds = ms.map((m) => m.id);
   const [crit, funds, subs, terms, people] = await Promise.all([
-    msIds.length ? db.select().from(criteria).where(inArray(criteria.milestoneId, msIds)).orderBy(asc(criteria.key)) : [],
-    msIds.length ? db.select().from(fundings).where(inArray(fundings.milestoneId, msIds)).orderBy(desc(fundings.attempt)) : [],
-    msIds.length ? db.select().from(submissions).where(inArray(submissions.milestoneId, msIds)).orderBy(desc(submissions.attempt)) : [],
-    p.currentTermsVersionId ? db.select().from(termsVersions).where(eq(termsVersions.id, p.currentTermsVersionId)) : [],
+    msIds.length
+      ? db.select().from(criteria).where(inArray(criteria.milestoneId, msIds)).orderBy(asc(criteria.key))
+      : [],
+    msIds.length
+      ? db.select().from(fundings).where(inArray(fundings.milestoneId, msIds)).orderBy(desc(fundings.attempt))
+      : [],
+    msIds.length
+      ? db
+          .select()
+          .from(submissions)
+          .where(inArray(submissions.milestoneId, msIds))
+          .orderBy(desc(submissions.attempt))
+      : [],
+    p.currentTermsVersionId
+      ? db.select().from(termsVersions).where(eq(termsVersions.id, p.currentTermsVersionId))
+      : [],
     peopleById([p.clientUserId, p.workerUserId]),
   ]);
-  const sigs = terms[0] ? await db.select().from(signatures).where(eq(signatures.termsVersionId, terms[0].id)) : [];
+  const sigs = terms[0]
+    ? await db.select().from(signatures).where(eq(signatures.termsVersionId, terms[0].id))
+    : [];
 
   const subIds = subs.map((s) => s.id);
-  const vers = subIds.length ? await db.select().from(verifications).where(inArray(verifications.submissionId, subIds)).orderBy(desc(verifications.startedAt)) : [];
+  const vers = subIds.length
+    ? await db
+        .select()
+        .from(verifications)
+        .where(inArray(verifications.submissionId, subIds))
+        .orderBy(desc(verifications.startedAt))
+    : [];
   const verIds = vers.map((v) => v.id);
   const [results, props] = await Promise.all([
-    verIds.length ? db.select().from(criterionResults).where(inArray(criterionResults.verificationId, verIds)) : [],
+    verIds.length
+      ? db.select().from(criterionResults).where(inArray(criterionResults.verificationId, verIds))
+      : [],
     verIds.length ? db.select().from(proposals).where(inArray(proposals.verificationId, verIds)) : [],
   ]);
   const propIds = props.map((x) => x.id);
-  const setts = propIds.length ? await db.select().from(settlements).where(inArray(settlements.proposalId, propIds)) : [];
+  const setts = propIds.length
+    ? await db.select().from(settlements).where(inArray(settlements.proposalId, propIds))
+    : [];
   const settIds = setts.map((s) => s.id);
-  const pays = settIds.length ? await db.select().from(payouts).where(inArray(payouts.settlementId, settIds)) : [];
+  const pays = settIds.length
+    ? await db.select().from(payouts).where(inArray(payouts.settlementId, settIds))
+    : [];
 
   const role = partyRole(actor, p);
   const milestonesOut = ms.map((m) => {
@@ -152,7 +201,15 @@ export async function getAdminOverview() {
 
   const [fundingRows, settlementRows, payoutRows, failedWebhooks, deadJobs] = await Promise.all([
     db
-      .select({ f: fundings, m: { id: milestones.id, title: milestones.title, state: milestones.state, promiseId: milestones.promiseId } })
+      .select({
+        f: fundings,
+        m: {
+          id: milestones.id,
+          title: milestones.title,
+          state: milestones.state,
+          promiseId: milestones.promiseId,
+        },
+      })
       .from(fundings)
       .innerJoin(milestones, eq(milestones.id, fundings.milestoneId))
       .orderBy(desc(fundings.createdAt))
@@ -165,7 +222,12 @@ export async function getAdminOverview() {
       .where(and(isNull(webhookEvents.processedAt), sql`${webhookEvents.error} is not null`))
       .orderBy(desc(webhookEvents.receivedAt))
       .limit(20),
-    db.select().from(jobFailures).where(isNull(jobFailures.resolvedAt)).orderBy(desc(jobFailures.createdAt)).limit(20),
+    db
+      .select()
+      .from(jobFailures)
+      .where(isNull(jobFailures.resolvedAt))
+      .orderBy(desc(jobFailures.createdAt))
+      .limit(20),
   ]);
 
   return {

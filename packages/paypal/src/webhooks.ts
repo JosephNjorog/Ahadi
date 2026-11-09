@@ -66,10 +66,17 @@ export async function verifyWebhookSignature(
 }
 
 export async function listWebhooks(client: PayPalClient) {
-  return client.request<{ webhooks: Webhook[] }>({ operation: "webhooks.list", path: "/v1/notifications/webhooks" });
+  return client.request<{ webhooks: Webhook[] }>({
+    operation: "webhooks.list",
+    path: "/v1/notifications/webhooks",
+  });
 }
 
-export async function createWebhook(client: PayPalClient, url: string, eventTypes: readonly string[] = SUBSCRIBED_EVENTS) {
+export async function createWebhook(
+  client: PayPalClient,
+  url: string,
+  eventTypes: readonly string[] = SUBSCRIBED_EVENTS,
+) {
   return client.request<Webhook>({
     operation: "webhooks.create",
     path: "/v1/notifications/webhooks",
@@ -77,7 +84,11 @@ export async function createWebhook(client: PayPalClient, url: string, eventType
   });
 }
 
-export async function updateWebhookEvents(client: PayPalClient, webhookId: string, eventTypes: readonly string[] = SUBSCRIBED_EVENTS) {
+export async function updateWebhookEvents(
+  client: PayPalClient,
+  webhookId: string,
+  eventTypes: readonly string[] = SUBSCRIBED_EVENTS,
+) {
   return client.request<Webhook>({
     method: "PATCH",
     operation: "webhooks.update",
