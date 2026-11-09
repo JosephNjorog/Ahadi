@@ -24,11 +24,7 @@ export default async function Dashboard() {
             Every job is a promise: signed criteria, PayPal-secured funds, verified release.
           </p>
         </div>
-        <span title="AI contract builder arrives in Phase 2">
-          <ButtonLink href="#" variant="secondary" className="pointer-events-none opacity-60">
-            New promise · soon
-          </ButtonLink>
-        </span>
+        <ButtonLink href="/promises/new">New promise</ButtonLink>
       </div>
 
       {!user.paypalEmail ? (
@@ -47,7 +43,11 @@ export default async function Dashboard() {
       </div>
 
       {promises.length === 0 ? (
-        <EmptyState title="No promises yet" icon={<span className="text-3xl">🤝</span>}>
+        <EmptyState
+          title="No promises yet"
+          icon={<span className="text-3xl">🤝</span>}
+          action={<ButtonLink href="/promises/new">Start your first promise</ButtonLink>}
+        >
           When someone invites you to a promise, or you create one, it shows up here. In the demo, run{" "}
           <code className="rounded bg-canvas px-1">npm run db:seed</code> and sign in as the client.
         </EmptyState>
