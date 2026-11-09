@@ -118,7 +118,9 @@ export const promises = pgTable(
     inviteEmail: text("invite_email"),
     serviceId: uuid("service_id"),
     /** idle | generating | failed — Contract Architect job state for the terms editor. */
-    termsStatus: text("terms_status", { enum: ["idle", "generating", "failed"] }).notNull().default("idle"),
+    termsStatus: text("terms_status", { enum: ["idle", "generating", "failed"] })
+      .notNull()
+      .default("idle"),
     termsError: text("terms_error"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -137,7 +139,9 @@ export const termsVersions = pgTable(
     body: jsonb("body").$type<TermsBody>().notNull(),
     bodyHash: text("body_hash").notNull(),
     authorId: uuid("author_id"),
-    source: text("source", { enum: ["architect", "manual", "seed", "template"] }).notNull().default("architect"),
+    source: text("source", { enum: ["architect", "manual", "seed", "template"] })
+      .notNull()
+      .default("architect"),
     changeSummary: text("change_summary"),
     /** Criteria Critic output (AGENT_PROMPTS §3). */
     critique: jsonb("critique"),
@@ -431,7 +435,9 @@ export const mediations = pgTable("mediations", {
   workerStatement: text("worker_statement"),
   aiResolution: jsonb("ai_resolution"),
   outcome: text("outcome", { enum: ["accepted", "rejected", "escalated", "resubmit"] }),
-  status: text("status", { enum: ["OPEN", "RUNNING", "PROPOSED", "CLOSED"] }).notNull().default("OPEN"),
+  status: text("status", { enum: ["OPEN", "RUNNING", "PROPOSED", "CLOSED"] })
+    .notNull()
+    .default("OPEN"),
   proposalId: uuid("proposal_id"),
   resolutionProposalId: uuid("resolution_proposal_id"),
   clientDecision: text("client_decision", { enum: ["accept", "reject"] }),
