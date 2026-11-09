@@ -52,7 +52,7 @@ export const CreatePromiseInput = z.object({
 });
 export type CreatePromiseInput = z.infer<typeof CreatePromiseInput>;
 
-export async function createPromise(actor: Actor, raw: unknown) {
+export async function createPromise(actor: Actor, raw: unknown, opts: { inline?: boolean } = {}) {
   const input = CreatePromiseInput.parse(raw);
   const db = getDb();
   if (actor.kind !== "user" && actor.kind !== "agent")
@@ -105,7 +105,24 @@ export async function createPromise(actor: Actor, raw: unknown) {
   });
 
   if (input.workerEmail) await attachWorkerByEmail(promise.id, input.workerEmail);
-  await requestTermsGeneration(promise.id, { authorId: actorUserId(actor) });
+  else if (promise.workerUserId || promise.workerAgentId) {
+    // A marketplace provider is the counterparty from the start.
+    await db.transaction((tx) =>
+      applyPromiseEvent(tx, {
+        promiseId: promise.id,
+        event: "INVITE_SENT",
+        actor,
+        ledgerType: "promise.negotiating",
+        payload: { serviceId: service?.id ?? null },
+      }),
+    );
+  }
+  if (opts.inline && anthropicConfigured()) {
+    await db.update(promises).set({ termsStatus: "generating" }).where(eq(promises.id, promise.id));
+    await generateTerms(promise.id, undefined, actorUserId(actor));
+  } else {
+    await requestTermsGeneration(promise.id, { authorId: actorUserId(actor) });
+  }
   await enqueue("risk.score", { promiseId: promise.id, trigger: "created" }).catch(() => undefined);
   return promise;
 }
@@ -609,6 +626,38 @@ async function notifyOtherParty(
   const role = partyRole(actor, p);
   const other = role === "client" ? p.workerUserId : role === "worker" ? p.clientUserId : null;
   await notify({ userId: other, template, title, body, link: `/promises/${p.id}`, promiseId: p.id });
+}
+
+/**
+ * SPEC §12: agent clients auto-sign when the terms are within their mandate; provider agents
+ * auto-sign terms built for their marketplace service.
+ */
+export async function autoSignForAgents(promiseId: string) {
+  const db = getDb();
+  const [p] = await db.select().from(promises).where(eq(promises.id, promiseId));
+  if (!p || p.state !== "NEGOTIATING" || !p.currentTermsVersionId) return;
+  const [tv] = await db.select().from(termsVersions).where(eq(termsVersions.id, p.currentTermsVersionId));
+  const total = tv!.body.milestones.reduce((s, m) => s + m.amountMinor, 0);
+  const { agents: agentsTable } = await import("@ahadi/db");
+  const { assertMandate } = await import("./agent-keys");
+  const { scoreForUser } = await import("./passport");
+  for (const [party, agentId] of [
+    ["client", p.clientAgentId],
+    ["worker", p.workerAgentId],
+  ] as const) {
+    if (!agentId) continue;
+    const [a] = await db.select().from(agentsTable).where(eq(agentsTable.id, agentId));
+    if (!a || a.revokedAt) continue;
+    if (party === "client")
+      await assertMandate(a.id, {
+        amountMinor: total,
+        category: p.category,
+        providerScore: p.workerUserId ? await scoreForUser(p.workerUserId) : null,
+      });
+    if (party === "worker" && !p.serviceId) continue;
+    const [owner] = await db.select().from(users).where(eq(users.id, a.ownerId));
+    await signTerms({ kind: "agent", agent: a, owner: owner! }, promiseId, tv!.bodyHash);
+  }
 }
 
 export async function listTermsVersions(promiseId: string) {
