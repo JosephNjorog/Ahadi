@@ -88,12 +88,10 @@ async function domSummary(page: Page): Promise<DomSummary> {
         .filter(vis)
         .map((h) => ({ level: Number(h.tagName[1]), text: (h.textContent ?? "").trim().slice(0, 200) })),
       visibleText: (document.body?.innerText ?? "").replace(/\n{3,}/g, "\n\n").slice(0, 20000),
-      links: [...document.querySelectorAll("a[href]")]
-        .slice(0, 200)
-        .map((a) => ({
-          text: (a.textContent ?? "").trim().slice(0, 80),
-          href: (a as HTMLAnchorElement).href,
-        })),
+      links: [...document.querySelectorAll("a[href]")].slice(0, 200).map((a) => ({
+        text: (a.textContent ?? "").trim().slice(0, 80),
+        href: (a as HTMLAnchorElement).href,
+      })),
       forms: [...document.querySelectorAll("form")].map((f) => ({
         selector: cssPath(f),
         action: f.getAttribute("action"),
@@ -104,13 +102,11 @@ async function domSummary(page: Page): Promise<DomSummary> {
           required: i.hasAttribute("required"),
         })),
       })),
-      images: [...document.querySelectorAll("img")]
-        .slice(0, 100)
-        .map((img) => ({
-          src: (img as HTMLImageElement).currentSrc || (img as HTMLImageElement).src,
-          alt: img.getAttribute("alt"),
-          broken: (img as HTMLImageElement).complete && (img as HTMLImageElement).naturalWidth === 0,
-        })),
+      images: [...document.querySelectorAll("img")].slice(0, 100).map((img) => ({
+        src: (img as HTMLImageElement).currentSrc || (img as HTMLImageElement).src,
+        alt: img.getAttribute("alt"),
+        broken: (img as HTMLImageElement).complete && (img as HTMLImageElement).naturalWidth === 0,
+      })),
     };
   });
 }
