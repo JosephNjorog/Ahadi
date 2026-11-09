@@ -19,6 +19,7 @@ const nextConfig: NextConfig = {
     "@ahadi/paypal",
     "@ahadi/queue",
     "@ahadi/services",
+    "@ahadi/worker",
   ],
   serverExternalPackages: ["pg", "pino", "bullmq", "ioredis"],
   env: {
