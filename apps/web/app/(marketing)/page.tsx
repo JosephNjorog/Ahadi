@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { GeistMono } from "geist/font/mono";
-import { GeistSans } from "geist/font/sans";
 import {
   IconArrow,
   IconBot,
@@ -18,10 +16,10 @@ import {
   IconSplit,
   IconUser,
   IconX,
-} from "@/components/landing/icons";
+} from "@/components/ui/icons";
 import { AhadiMark } from "@/components/brand/ahadi-mark";
 import { ProductMock } from "@/components/landing/product-mock";
-import { ThemeToggle, themeBootScript } from "@/components/landing/theme-toggle";
+import { ThemeToggle } from "@/components/landing/theme-toggle";
 import { currentUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -267,9 +265,7 @@ export default async function Landing() {
   const start = user ? "/dashboard" : "/sign-in";
 
   return (
-    <div className={`lp ${GeistSans.variable} ${GeistMono.variable} min-h-dvh antialiased`}>
-      <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
-
+    <div className="lp min-h-dvh antialiased">
       {/* nav */}
       <header className="sticky top-0 z-30 border-b border-l-line bg-l-bg/80 backdrop-blur-md">
         <nav className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-4 sm:px-6" aria-label="Main">

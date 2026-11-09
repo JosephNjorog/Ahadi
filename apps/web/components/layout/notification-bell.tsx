@@ -43,7 +43,7 @@ export function NotificationBell() {
       <button
         type="button"
         aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`}
-        className="relative flex size-9 items-center justify-center rounded-md text-ink-muted hover:bg-canvas hover:text-ink"
+        className="relative flex size-9 items-center justify-center rounded-md text-ink-muted hover:bg-raised hover:text-ink"
         onClick={() => {
           setOpen(!open);
           if (!open && unread)
@@ -84,7 +84,7 @@ export function NotificationBell() {
                   <Link
                     href={n.link ?? "/dashboard"}
                     onClick={() => setOpen(false)}
-                    className={cn("block px-4 py-3 hover:bg-canvas", !n.readAt && "bg-brand-50/50")}
+                    className={cn("block px-4 py-3 hover:bg-raised", !n.readAt && "bg-raised")}
                   >
                     <p className="text-sm font-medium">{n.title}</p>
                     <p className="mt-0.5 line-clamp-2 text-xs text-ink-muted">{n.body}</p>

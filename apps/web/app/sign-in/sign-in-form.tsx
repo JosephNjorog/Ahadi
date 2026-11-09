@@ -66,7 +66,10 @@ export function SignInForm({
         </Alert>
         {devLink ? (
           <Alert tone="warn" title="Development: email isn't configured">
-            <a className="break-all font-medium text-brand-700 underline" href={devLink}>
+            <a
+              className="break-all font-medium text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink"
+              href={devLink}
+            >
               Open the sign-in link
             </a>
           </Alert>
@@ -90,7 +93,7 @@ export function SignInForm({
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 h-11 w-full rounded-lg border border-line bg-surface px-3 text-base outline-none focus:border-brand-500"
+            className="mt-1 h-11 w-full rounded-lg border border-line bg-surface px-3 text-base outline-none focus:border-ink"
             placeholder="you@example.com"
             aria-invalid={Boolean(error) || undefined}
           />

@@ -3,8 +3,8 @@ import type { Tone } from "@/lib/status";
 import { cn } from "./cn";
 
 const tones: Record<Tone, string> = {
-  neutral: "border-line bg-canvas text-ink",
-  brand: "border-brand-100 bg-brand-50 text-brand-900 dark:text-ink",
+  neutral: "border-line bg-raised text-ink",
+  brand: "border-brand-100 bg-brand-50 text-ink",
   warn: "border-warn-600/25 bg-warn-50 text-ink",
   danger: "border-danger-600/25 bg-danger-50 text-ink",
   info: "border-info-600/25 bg-info-50 text-ink",

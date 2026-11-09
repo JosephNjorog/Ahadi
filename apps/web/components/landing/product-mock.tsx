@@ -12,7 +12,7 @@ import {
   IconUser,
   IconWallet,
   IconX,
-} from "./icons";
+} from "@/components/ui/icons";
 
 /**
  * A static, non-interactive picture of the Ahadi promise screen. The numbers are

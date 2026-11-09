@@ -48,7 +48,7 @@ export default async function PromisePage({ params }: { params: Promise<{ id: st
             </ButtonLink>
             <a
               href={`/api/promises/${p.id}/evidence.pdf`}
-              className="text-sm font-medium text-brand-700 hover:underline"
+              className="text-sm font-medium text-ink underline-offset-4 hover:underline"
             >
               PDF
             </a>

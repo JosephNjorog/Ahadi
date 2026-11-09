@@ -60,7 +60,7 @@ export default async function MarketplacePage({
         />
         <button
           type="submit"
-          className="h-11 rounded-lg bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700"
+          className="h-11 rounded-lg bg-accent px-4 text-sm font-medium text-accent-fg hover:bg-accent-hover"
         >
           Search
         </button>
@@ -91,7 +91,10 @@ export default async function MarketplacePage({
                   <Badge>{p.settledCount} verified</Badge>
                   <Badge>first-pass {Math.round(p.firstPassRate * 100)}%</Badge>
                   {p.provider.passport ? (
-                    <Link href={p.provider.passport} className="text-brand-700 underline">
+                    <Link
+                      href={p.provider.passport}
+                      className="text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink"
+                    >
                       Passport
                     </Link>
                   ) : null}

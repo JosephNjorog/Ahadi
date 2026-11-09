@@ -47,7 +47,7 @@ export default async function SettingsPage() {
               </ButtonLink>
               <a
                 href={`/api/passport/${user.passportSlug}/statement.pdf`}
-                className="text-sm font-medium text-brand-700 underline"
+                className="text-sm font-medium text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink"
               >
                 Download statement (PDF)
               </a>

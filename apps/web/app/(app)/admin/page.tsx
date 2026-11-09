@@ -33,13 +33,13 @@ export default async function AdminPage() {
         <div className="mt-3 flex flex-wrap gap-2">
           <Link
             href="/admin/ledger"
-            className="rounded-lg border border-line bg-surface px-3 py-1.5 text-sm font-medium hover:bg-canvas"
+            className="rounded-lg border border-line bg-surface px-3 py-1.5 text-sm font-medium hover:bg-raised"
           >
             Ledger grid
           </Link>
           <Link
             href="/admin/ops"
-            className="rounded-lg border border-line bg-surface px-3 py-1.5 text-sm font-medium hover:bg-canvas"
+            className="rounded-lg border border-line bg-surface px-3 py-1.5 text-sm font-medium hover:bg-raised"
           >
             Ops Agent
           </Link>
@@ -116,7 +116,10 @@ export default async function AdminPage() {
                     </div>
                     <p className="text-ink-muted">{d.detail ?? d.summary ?? (d.reasons ?? []).join("; ")}</p>
                     {f.subjectType === "promise" ? (
-                      <Link href={`/promises/${f.subjectId}`} className="text-xs text-brand-700 underline">
+                      <Link
+                        href={`/promises/${f.subjectId}`}
+                        className="text-xs text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink"
+                      >
                         Open promise
                       </Link>
                     ) : null}
@@ -199,7 +202,7 @@ export default async function AdminPage() {
                       {ms.state === "FUNDED" ? (
                         <Link
                           href={`/admin/milestones/${ms.id}`}
-                          className="text-sm font-medium text-brand-700 hover:underline"
+                          className="text-sm font-medium text-ink underline-offset-4 hover:underline"
                         >
                           Manual verdict →
                         </Link>
@@ -271,52 +274,6 @@ export default async function AdminPage() {
           )}
         </Card>
       </div>
-
-      <Card className="overflow-hidden">
-        <CardHeader
-          title="Agent runs"
-          description="Latest model calls: agent, prompt version, model, tokens and latency (SPEC §24)"
-        />
-        {runs.length === 0 ? (
-          <CardBody>
-            <p className="text-sm text-ink-muted">No model calls yet.</p>
-          </CardBody>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-sm">
-              <thead className="bg-canvas text-xs uppercase tracking-wide text-ink-subtle">
-                <tr>
-                  <th className="px-4 py-2 font-medium">Agent</th>
-                  <th className="px-4 py-2 font-medium">Model</th>
-                  <th className="px-4 py-2 font-medium">Status</th>
-                  <th className="px-4 py-2 font-medium">Tokens in/out</th>
-                  <th className="px-4 py-2 font-medium">Latency</th>
-                  <th className="px-4 py-2 font-medium">When</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {runs.map((r) => (
-                  <tr key={r.id}>
-                    <td className="px-4 py-2">
-                      {r.agent} <span className="text-xs text-ink-subtle">v{r.promptVersion}</span>
-                    </td>
-                    <td className="px-4 py-2 font-mono text-xs">{r.model}</td>
-                    <td className="px-4 py-2">
-                      <Badge tone={r.status === "ok" ? "brand" : "danger"}>{r.status}</Badge>{" "}
-                      {r.attempts > 1 ? <span className="text-xs text-ink-subtle">×{r.attempts}</span> : null}
-                    </td>
-                    <td className="tabular px-4 py-2 text-xs">
-                      {r.inputTokens.toLocaleString()} / {r.outputTokens.toLocaleString()}
-                    </td>
-                    <td className="tabular px-4 py-2 text-xs">{(r.latencyMs / 1000).toFixed(1)}s</td>
-                    <td className="px-4 py-2 text-xs">{formatDateTime(r.createdAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
 
       <Card className="overflow-hidden">
         <CardHeader
