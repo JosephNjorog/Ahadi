@@ -223,6 +223,8 @@ export async function seed({ resetFirst = false } = {}) {
     return p!.id;
   });
 
+  await seedAgentEconomy(client.id);
+
   const ids = await d
     .select({ id: users.id, email: users.email })
     .from(users)
@@ -363,16 +365,14 @@ async function seedAgentEconomy(clientId: string) {
         apiKeyPrefix: key.slice(0, 12),
       })
       .returning();
-    await d
-      .insert(mandates)
-      .values({
-        agentId: b!.id,
-        perJobMaxMinor: 5000,
-        monthlyMaxMinor: 20_000,
-        allowedCategories: ["research", "writing"],
-        minProviderScore: 0.7,
-        requireOwnerApprovalAboveMinor: null,
-      });
+    await d.insert(mandates).values({
+      agentId: b!.id,
+      perJobMaxMinor: 5000,
+      monthlyMaxMinor: 20_000,
+      allowedCategories: ["research", "writing"],
+      minProviderScore: 0.7,
+      requireOwnerApprovalAboveMinor: null,
+    });
     console.log(`\nBuyer agent API key (shown once — put it in your MCP client config):\n  ${key}\n`);
   }
 }
