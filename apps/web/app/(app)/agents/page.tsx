@@ -29,7 +29,7 @@ export default async function AgentsPage() {
           ) : (
             agents.map((a) => (
               <Link key={a.id} href={`/agents/${a.id}`} className="block">
-                <Card className="hover:border-brand-500">
+                <Card className="hover:border-line-strong">
                   <CardBody className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">

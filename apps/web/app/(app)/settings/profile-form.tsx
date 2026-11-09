@@ -68,7 +68,7 @@ export function ProfileForm({ initial }: { initial: Values }) {
           setStatus("idle");
         }}
         aria-invalid={Boolean(errors[key]) || undefined}
-        className="mt-1 h-11 w-full rounded-lg border border-line bg-surface px-3 text-base outline-none focus:border-brand-500 aria-[invalid]:border-danger-600"
+        className="mt-1 h-11 w-full rounded-lg border border-line bg-surface px-3 text-base outline-none focus:border-ink aria-[invalid]:border-danger-600"
       />
       {errors[key] ? <span className="mt-1 block text-sm text-danger-600">{errors[key]}</span> : null}
     </label>

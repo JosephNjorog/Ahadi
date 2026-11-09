@@ -48,7 +48,7 @@ export function OpsChat() {
               key={p}
               type="button"
               onClick={() => void send(p)}
-              className="rounded-full border border-line bg-surface px-3 py-1.5 text-left text-sm hover:bg-canvas"
+              className="rounded-full border border-line bg-surface px-3 py-1.5 text-left text-sm hover:bg-raised"
             >
               {p}
             </button>

@@ -14,6 +14,7 @@ export * from "./monitor";
 export * from "./email";
 export * from "./auth";
 export * from "./queries";
+export * from "./dashboard";
 export * from "./admin";
 export * from "./notify";
 export * from "./whatsapp-api";

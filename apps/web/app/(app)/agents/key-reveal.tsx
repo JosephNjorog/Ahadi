@@ -37,7 +37,10 @@ export function KeyReveal({ apiKey, agentId }: { apiKey: string; agentId?: strin
       </div>
       <pre className="overflow-x-auto rounded-lg bg-canvas p-3 text-xs">{config}</pre>
       {agentId ? (
-        <Link href={`/agents/${agentId}`} className="text-sm font-medium text-brand-700 underline">
+        <Link
+          href={`/agents/${agentId}`}
+          className="text-sm font-medium text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink"
+        >
           Set its spending mandate →
         </Link>
       ) : null}

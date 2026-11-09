@@ -47,7 +47,10 @@ export function LedgerGrid() {
         pinned: "left",
         minWidth: 220,
         cellRenderer: (p: { value: string; data: Row }) => (
-          <a href={`/promises/${String(p.data.promise_id)}`} className="text-brand-700 underline">
+          <a
+            href={`/promises/${String(p.data.promise_id)}`}
+            className="text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink"
+          >
             {p.value}
           </a>
         ),
@@ -161,7 +164,7 @@ export function LedgerGrid() {
           }
           rowData={rows}
           columnDefs={cols}
-          defaultColDef={{ sortable: true, filter: true, resizable: true, enableRowGroup: true }}
+          defaultColDef={{ sortable: true, filter: true, resizable: true }}
           quickFilterText={quick}
           pagination
           paginationPageSize={50}

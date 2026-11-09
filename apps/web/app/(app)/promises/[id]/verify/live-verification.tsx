@@ -82,7 +82,7 @@ export function LiveVerification({ initial, kesPerUsd }: { initial: View; kesPer
                 href={v.submission.url}
                 target="_blank"
                 rel="noreferrer noopener"
-                className="text-brand-700 underline"
+                className="text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink"
               >
                 {v.submission.url}
               </a>
@@ -510,9 +510,7 @@ function HumanReview({ v }: { v: View }) {
                     onClick={() => setD({ ...d, [c.key]: { ...s, outcome: o as "pass" } })}
                     className={cn(
                       "h-8 rounded-lg border px-3 text-sm capitalize",
-                      s.outcome === o
-                        ? "border-brand-600 bg-brand-50 text-brand-700"
-                        : "border-line text-ink-muted",
+                      s.outcome === o ? "border-ink bg-raised text-ink" : "border-line text-ink-muted",
                     )}
                   >
                     {o}

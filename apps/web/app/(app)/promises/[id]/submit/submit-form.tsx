@@ -100,7 +100,7 @@ export function SubmitForm({
               onClick={() => setKind(k)}
               className={cn(
                 "h-9 rounded-lg border px-3 text-sm font-medium",
-                kind === k ? "border-brand-600 bg-brand-50 text-brand-700" : "border-line text-ink-muted",
+                kind === k ? "border-ink bg-raised text-ink" : "border-line text-ink-muted",
               )}
             >
               {LABEL[k]}
