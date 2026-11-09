@@ -9,13 +9,13 @@ type Size = "sm" | "md" | "lg";
 const base =
   "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 whitespace-nowrap";
 const variants: Record<Variant, string> = {
-  primary: "bg-brand-600 text-white hover:bg-brand-700 shadow-sm",
-  secondary: "bg-surface text-ink border border-line hover:bg-canvas",
-  ghost: "text-ink-muted hover:text-ink hover:bg-canvas",
-  danger: "bg-danger-600 text-white hover:opacity-90",
+  primary: "bg-accent text-accent-fg hover:bg-accent-hover shadow-sm",
+  secondary: "bg-surface text-ink border border-line hover:bg-raised",
+  ghost: "text-ink-muted hover:text-ink hover:bg-raised",
+  danger: "bg-danger-600 text-white hover:opacity-90 dark:text-canvas",
 };
 const sizes: Record<Size, string> = {
-  sm: "h-8 px-3 text-sm",
+  sm: "h-8 px-3 text-[13px]",
   md: "h-10 px-4 text-sm",
   lg: "h-12 px-6 text-base",
 };
