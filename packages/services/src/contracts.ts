@@ -147,7 +147,8 @@ export async function requestTermsGeneration(
       .update(promises)
       .set({
         termsStatus: "failed",
-        termsError: "The AI contract builder needs ANTHROPIC_API_KEY. You can still write the terms by hand.",
+        termsError:
+          "The AI contract builder needs an AI provider key (OPENROUTER_API_KEY or ANTHROPIC_API_KEY). You can still write the terms by hand.",
       })
       .where(eq(promises.id, promiseId));
     return;

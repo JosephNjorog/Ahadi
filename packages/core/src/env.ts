@@ -31,6 +31,8 @@ const EnvSchema = z.object({
   PAYPAL_CLIENT_SECRET: optionalString,
   PAYPAL_WEBHOOK_ID: optionalString,
 
+  AI_PROVIDER: z.enum(["openrouter", "anthropic"]).optional(),
+  OPENROUTER_API_KEY: optionalString,
   ANTHROPIC_API_KEY: optionalString,
   MODEL_ARCHITECT: z.string().default("claude-opus-5-5"),
   MODEL_VERIFIER: z.string().default("claude-sonnet-5-5"),

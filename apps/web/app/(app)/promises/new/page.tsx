@@ -31,9 +31,10 @@ export default async function NewPromisePage({
           the provider's template criteria are the starting point.
         </Alert>
       ) : null}
-      {!process.env.ANTHROPIC_API_KEY ? (
+      {!process.env.OPENROUTER_API_KEY && !process.env.ANTHROPIC_API_KEY ? (
         <Alert tone="warn" title="AI contract builder is off">
-          ANTHROPIC_API_KEY isn't set, so you'll write the criteria by hand after creating the promise.
+          No AI provider key is set (OPENROUTER_API_KEY or ANTHROPIC_API_KEY), so you'll write the criteria by
+          hand after creating the promise.
         </Alert>
       ) : null}
       <Card>

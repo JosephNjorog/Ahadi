@@ -20,7 +20,9 @@ export default async function OpsPage() {
           refund or pay out.
         </p>
       </div>
-      {!process.env.ANTHROPIC_API_KEY ? <Alert tone="warn" title="Needs ANTHROPIC_API_KEY" /> : null}
+      {!process.env.OPENROUTER_API_KEY && !process.env.ANTHROPIC_API_KEY ? (
+        <Alert tone="warn" title="Needs an AI provider key (OPENROUTER_API_KEY or ANTHROPIC_API_KEY)" />
+      ) : null}
       <OpsChat />
     </div>
   );

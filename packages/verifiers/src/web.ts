@@ -149,7 +149,7 @@ async function newContext(
 ): Promise<BrowserContext | null> {
   const browser = await getBrowser();
   if (!browser) return null;
-  return browser.newContext({
+  const ctx = await browser.newContext({
     viewport,
     deviceScaleFactor: 1,
     isMobile: mobile,
@@ -158,6 +158,9 @@ async function newContext(
     javaScriptEnabled: true,
     serviceWorkers: "block",
   });
+  // Bundlers that keep function names (tsx/esbuild) wrap evaluate callbacks in __name(); define it in the page.
+  await ctx.addInitScript({ content: "globalThis.__name = globalThis.__name || ((fn) => fn);" });
+  return ctx;
 }
 
 /**

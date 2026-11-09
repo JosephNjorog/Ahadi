@@ -15,7 +15,8 @@ services:
     autoDeployTrigger: checksPass
     # Live service: srv-dbolqp5g1s2s73fjsv60 → https://ahadi-web.onrender.com
     # Free plan has no pre-deploy step, so migrations run at the end of the build.
-    buildCommand: npm ci && npm run build --workspace=@ahadi/web && npm run db:migrate
+    # SEED_ON_DEPLOY=true loads the idempotent demo data (no shell on the free plan).
+    buildCommand: npm ci && npm run build --workspace=@ahadi/web && npm run db:migrate && if [ "$SEED_ON_DEPLOY" = "true" ]; then npm run db:seed; fi
     startCommand: npm run start --workspace=@ahadi/web
     healthCheckPath: /api/health
     envVars:

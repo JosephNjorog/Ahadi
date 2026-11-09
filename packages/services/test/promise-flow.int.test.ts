@@ -10,6 +10,7 @@ process.env.DEMO_MODE = "true";
 process.env.DEMO_WORKER_PAYPAL_EMAIL = "worker-sandbox@ahadi.test";
 process.env.LOG_LEVEL = "silent";
 delete process.env.ANTHROPIC_API_KEY;
+delete process.env.OPENROUTER_API_KEY;
 
 const { runMigrations } = await import("@ahadi/db/migrate");
 const db = await import("@ahadi/db");
@@ -66,7 +67,7 @@ describe("Phase 2–3 promise flow (no AI configured)", () => {
     promiseId = p.id;
     const [row] = await db.getDb().select().from(db.promises).where(eq(db.promises.id, p.id));
     expect(row!.termsStatus).toBe("failed");
-    expect(row!.termsError).toMatch(/ANTHROPIC_API_KEY/);
+    expect(row!.termsError).toMatch(/AI provider key/);
     const body = { ...BAKERY_TERMS, title: "Bakery landing page (flow test)" };
     const saved = await svc.proposeTermsEdit(await as("client"), p.id, {
       body,

@@ -19,7 +19,7 @@ What is built, what was verified, and what remains. Last updated with the Phase 
 These are fully implemented but have only run against fakes or with the feature switched off:
 
 1. **Real PayPal sandbox** — order, authorization, partial capture, void, payouts and webhooks against your sandbox app (`npm run paypal:check`, then SETUP.md §7).
-2. **Real Claude calls** — every agent (Architect, Critic, Sentinel, Verifiers, Reviewer, Mediator, Explainer, Risk, Concierge, Ops, Kazi) needs `ANTHROPIC_API_KEY`. Structured outputs, prompts and post-validation are unit-tested, but no live model output has been checked yet.
+2. **AI agents in production** — agents run through OpenRouter (free models by default) or the Anthropic API. Live runs on the free models are covered in the section below; Kazi's web research uses OpenRouter's paid web plugin and needs credits.
 3. **Neon** — tested on local Postgres 16; the Neon-specific connection handling (pooled/direct, SSL, channel binding) runs on first deploy.
 4. **Render deploy** — the service exists but has not built the full app yet (deploys after `main` gets the code and CI passes; env vars must be set first).
 5. **Optional integrations** — E2B sandbox, Resend email, Whisper/Deepgram, WhatsApp Cloud API.
@@ -49,5 +49,5 @@ These are fully implemented but have only run against fakes or with the feature 
 - Artifacts are stored in Postgres (bytea, content-addressed) instead of a bucket.
 - PDFs use pdfkit instead of `@react-pdf/renderer`.
 - Prompts are versioned TypeScript modules instead of `.md` files (bundling).
-- Current Claude models reject forced `tool_choice`, so agents use structured outputs (`output_config.format`) with Zod validation; refusal fallbacks are enabled on Opus/Sonnet.
+- Agents use structured JSON output validated with Zod plus code-level checks, through either OpenRouter (OpenAI-compatible, `response_format: json_schema`) or the Anthropic API (`output_config.format`).
 - MCP is served by the web app at `/mcp` (one service on the free plan); a standalone server is also available on port 3001.

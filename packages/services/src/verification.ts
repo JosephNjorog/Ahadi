@@ -437,7 +437,8 @@ async function pipeline(
           credit: 0,
           confidence: 0,
           decidedBy: "agent",
-          reasoning: "AI verification is not configured (ANTHROPIC_API_KEY). A human decides this criterion.",
+          reasoning:
+            "AI verification is not configured (an AI provider key (OPENROUTER_API_KEY or ANTHROPIC_API_KEY)). A human decides this criterion.",
           evidenceArtifactIds: [],
         };
         results.push(row);
