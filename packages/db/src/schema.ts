@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  customType,
   bigint,
   bigserial,
   boolean,
@@ -29,6 +30,7 @@ const updatedAt = () =>
     .defaultNow()
     .$onUpdate(() => new Date());
 const minor = (name: string) => bigint(name, { mode: "number" });
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => "bytea" });
 
 /* ─────────────── Identity ─────────────── */
 
@@ -68,7 +70,10 @@ export const agents = pgTable("agents", {
     .references(() => users.id),
   name: text("name").notNull(),
   kind: text("kind", { enum: ["buyer", "provider", "both"] }).notNull(),
-  apiKeyHash: text("api_key_hash").notNull(),
+  apiKeyHash: text("api_key_hash").notNull().unique(),
+  /** First characters of the key ("ahk_live_ab12…") so owners can tell keys apart. */
+  apiKeyPrefix: text("api_key_prefix").notNull().default(""),
+  description: text("description"),
   providerWebhookUrl: text("provider_webhook_url"),
   createdAt: createdAt(),
   revokedAt: timestamp("revoked_at", { withTimezone: true }),
@@ -108,6 +113,13 @@ export const promises = pgTable(
     currency: text("currency").notNull().default("USD"),
     currentTermsVersionId: uuid("current_terms_version_id"),
     sourceBrief: text("source_brief"),
+    budgetMinor: minor("budget_minor"),
+    deadlineAt: timestamp("deadline_at", { withTimezone: true }),
+    inviteEmail: text("invite_email"),
+    serviceId: uuid("service_id"),
+    /** idle | generating | failed — Contract Architect job state for the terms editor. */
+    termsStatus: text("terms_status", { enum: ["idle", "generating", "failed"] }).notNull().default("idle"),
+    termsError: text("terms_error"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -125,6 +137,12 @@ export const termsVersions = pgTable(
     body: jsonb("body").$type<TermsBody>().notNull(),
     bodyHash: text("body_hash").notNull(),
     authorId: uuid("author_id"),
+    source: text("source", { enum: ["architect", "manual", "seed", "template"] }).notNull().default("architect"),
+    changeSummary: text("change_summary"),
+    /** Criteria Critic output (AGENT_PROMPTS §3). */
+    critique: jsonb("critique"),
+    /** questionsForClient, manipulationNotes from the Architect. */
+    notes: jsonb("notes"),
     createdAt: createdAt(),
   },
   (t) => [unique().on(t.promiseId, t.version)],
@@ -282,6 +300,8 @@ export const artifacts = pgTable("artifacts", {
   mime: text("mime").notNull(),
   bytes: bigint("bytes", { mode: "number" }).notNull(),
   meta: jsonb("meta"),
+  /** Inline storage (driver "db"); null when stored in an S3-compatible bucket under storage_key. */
+  data: bytea("data"),
   createdAt: createdAt(),
 });
 
@@ -297,6 +317,10 @@ export const verifications = pgTable("verifications", {
   injectionFlagged: boolean("injection_flagged").notNull().default(false),
   injectionReport: jsonb("injection_report"),
   summary: text("summary"),
+  /** Pipeline stage for the live UI: fetching | scanning | collecting | checking | judging | reviewing | settling | done */
+  stage: text("stage"),
+  evidence: jsonb("evidence"),
+  error: text("error"),
   modelUsage: jsonb("model_usage"),
   startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
   finishedAt: timestamp("finished_at", { withTimezone: true }),
@@ -340,6 +364,12 @@ export const proposals = pgTable(
     requiresHumanConfirm: boolean("requires_human_confirm").notNull().default(false),
     blockedReason: text("blocked_reason"),
     explanation: text("explanation").notNull(),
+    /** Settlement Explainer output per audience (AGENT_PROMPTS §8). */
+    explanationClient: jsonb("explanation_client"),
+    explanationWorker: jsonb("explanation_worker"),
+    /** Set when replaced (resubmission or mediation recompute). */
+    supersededAt: timestamp("superseded_at", { withTimezone: true }),
+    mediationId: uuid("mediation_id"),
     clientDecision: text("client_decision", { enum: ["accept", "object"] }),
     workerDecision: text("worker_decision", { enum: ["accept", "resubmit", "object"] }),
     windowEndsAt: timestamp("window_ends_at", { withTimezone: true }),
@@ -400,7 +430,13 @@ export const mediations = pgTable("mediations", {
   clientStatement: text("client_statement"),
   workerStatement: text("worker_statement"),
   aiResolution: jsonb("ai_resolution"),
-  outcome: text("outcome", { enum: ["accepted", "rejected", "escalated"] }),
+  outcome: text("outcome", { enum: ["accepted", "rejected", "escalated", "resubmit"] }),
+  status: text("status", { enum: ["OPEN", "RUNNING", "PROPOSED", "CLOSED"] }).notNull().default("OPEN"),
+  proposalId: uuid("proposal_id"),
+  resolutionProposalId: uuid("resolution_proposal_id"),
+  clientDecision: text("client_decision", { enum: ["accept", "reject"] }),
+  workerDecision: text("worker_decision", { enum: ["accept", "reject"] }),
+  rejections: integer("rejections").notNull().default(0),
   paypalDisputeId: text("paypal_dispute_id"),
   createdAt: createdAt(),
   closedAt: timestamp("closed_at", { withTimezone: true }),
@@ -489,3 +525,120 @@ export type Settlement = typeof settlements.$inferSelect;
 export type Payout = typeof payouts.$inferSelect;
 export type LedgerEvent = typeof ledgerEvents.$inferSelect;
 export type WebhookEvent = typeof webhookEvents.$inferSelect;
+
+/* ─────────────── Agents, passports, notifications, channels ─────────────── */
+
+/** Every model call (SPEC §8.2 logging, §24 agent run log). */
+export const agentRuns = pgTable(
+  "agent_runs",
+  {
+    id: id(),
+    agent: text("agent").notNull(),
+    promptVersion: text("prompt_version").notNull(),
+    model: text("model").notNull(),
+    subjectType: text("subject_type"),
+    subjectId: text("subject_id"),
+    status: text("status", { enum: ["ok", "error", "refusal"] }).notNull(),
+    attempts: integer("attempts").notNull().default(1),
+    inputTokens: integer("input_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    cacheReadTokens: integer("cache_read_tokens").notNull().default(0),
+    latencyMs: integer("latency_ms").notNull().default(0),
+    error: text("error"),
+    output: jsonb("output"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("agent_runs_subject_idx").on(t.subjectType, t.subjectId)],
+);
+
+/** Ahadi Passport (SPEC §15), recomputed after each settlement. */
+export const passports = pgTable("passports", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id),
+  slug: text("slug").notNull().unique(),
+  stats: jsonb("stats").notNull(),
+  score: numeric("score", { precision: 4, scale: 3, mode: "number" }).notNull().default(0),
+  showExactEarnings: boolean("show_exact_earnings").notNull().default(false),
+  recomputedAt: timestamp("recomputed_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** In-app inbox + delivery log for email / WhatsApp (SPEC §17 notify.send). */
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: id(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    promiseId: uuid("promise_id"),
+    template: text("template").notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    link: text("link"),
+    channels: text("channels").array().notNull(),
+    deliveries: jsonb("deliveries"),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("notifications_user_idx").on(t.userId, t.createdAt)],
+);
+
+export const whatsappMessages = pgTable(
+  "whatsapp_messages",
+  {
+    id: id(),
+    userId: uuid("user_id").references(() => users.id),
+    phoneE164: text("phone_e164").notNull(),
+    direction: text("direction", { enum: ["in", "out"] }).notNull(),
+    body: text("body").notNull(),
+    waMessageId: text("wa_message_id").unique(),
+    action: jsonb("action"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("whatsapp_phone_idx").on(t.phoneE164, t.createdAt)],
+);
+
+/** Daily anchors of each promise's ledger head (SPEC §11.2). */
+export const ledgerAnchors = pgTable(
+  "ledger_anchors",
+  {
+    id: id(),
+    promiseId: uuid("promise_id")
+      .notNull()
+      .references(() => promises.id),
+    seq: integer("seq").notNull(),
+    headHash: text("head_hash").notNull(),
+    anchoredAt: timestamp("anchored_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique().on(t.promiseId, t.seq)],
+);
+
+/** Agent actions log for the agent settings page (SPEC §20). */
+export const agentActions = pgTable(
+  "agent_actions",
+  {
+    id: id(),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => agents.id),
+    tool: text("tool").notNull(),
+    input: jsonb("input"),
+    result: text("result", { enum: ["ok", "error"] }).notNull(),
+    detail: jsonb("detail"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("agent_actions_agent_idx").on(t.agentId, t.createdAt)],
+);
+
+export type TermsVersion = typeof termsVersions.$inferSelect;
+export type Submission = typeof submissions.$inferSelect;
+export type Verification = typeof verifications.$inferSelect;
+export type CriterionResultRow = typeof criterionResults.$inferSelect;
+export type Artifact = typeof artifacts.$inferSelect;
+export type Mediation = typeof mediations.$inferSelect;
+export type AgentRow = typeof agents.$inferSelect;
+export type Mandate = typeof mandates.$inferSelect;
+export type Service = typeof services.$inferSelect;
+export type Passport = typeof passports.$inferSelect;
+export type Notification = typeof notifications.$inferSelect;
