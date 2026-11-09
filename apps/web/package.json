@@ -22,7 +22,10 @@
     "react": "19.1.10",
     "react-dom": "19.1.10",
     "zod": "^4.1.12",
-    "@ahadi/worker": "*"
+    "@ahadi/worker": "*",
+    "@ahadi/mcp": "*",
+    "@ahadi/agents": "*",
+    "@ahadi/verifiers": "*"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.16",

@@ -20,8 +20,21 @@ const nextConfig: NextConfig = {
     "@ahadi/queue",
     "@ahadi/services",
     "@ahadi/worker",
+    "@ahadi/mcp",
+    "@ahadi/agents",
+    "@ahadi/verifiers",
   ],
-  serverExternalPackages: ["pg", "pino", "bullmq", "ioredis"],
+  serverExternalPackages: [
+    "pg",
+    "pino",
+    "bullmq",
+    "ioredis",
+    "playwright-core",
+    "sharp",
+    "pdfkit",
+    "e2b",
+    "@anthropic-ai/sdk",
+  ],
   env: {
     NEXT_PUBLIC_PAYPAL_CLIENT_ID:
       process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || process.env.PAYPAL_CLIENT_ID || "",
