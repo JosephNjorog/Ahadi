@@ -4,6 +4,7 @@
 #    To split it out later, upgrade, add a `type: worker` service with
 #    `startCommand: npm run start --workspace=@ahadi/worker`, and set RUN_WORKER_IN_WEB=false on web.
 #  - Deploys from main only after GitHub CI checks pass (autoDeployTrigger: checksPass).
+#  - Redis is external (the account's one free Key Value is used by another project).
 services:
   - type: web
     name: ahadi-web
@@ -12,6 +13,7 @@ services:
     region: frankfurt
     branch: main
     autoDeployTrigger: checksPass
+    # Live service: srv-dbolqp5g1s2s73fjsv60 → https://ahadi-web.onrender.com
     # Free plan has no pre-deploy step, so migrations run at the end of the build.
     buildCommand: npm ci && npm run build --workspace=@ahadi/web && npm run db:migrate
     startCommand: npm run start --workspace=@ahadi/web
@@ -33,8 +35,8 @@ services:
         value: "0.05"
       - key: SESSION_SECRET
         generateValue: true
-      - key: REDIS_URL
-        fromService: { type: keyvalue, name: ahadi-kv, property: connectionString }
+      - key: REDIS_URL # Upstash (rediss://…) or a Render Key Value with maxmemoryPolicy noeviction
+        sync: false
       - key: APP_URL
         sync: false
       - key: DATABASE_URL # Neon pooled connection string
@@ -57,10 +59,3 @@ services:
         sync: false
       - key: DEMO_WORKER_PAYPAL_EMAIL
         sync: false
-
-  - type: keyvalue
-    name: ahadi-kv
-    plan: free
-    region: frankfurt
-    maxmemoryPolicy: noeviction # required by BullMQ
-    ipAllowList: [] # internal only
