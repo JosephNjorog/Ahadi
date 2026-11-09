@@ -21,7 +21,8 @@
     "next": "15.5.29",
     "react": "19.1.10",
     "react-dom": "19.1.10",
-    "zod": "^4.1.12"
+    "zod": "^4.1.12",
+    "@ahadi/worker": "*"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.16",
