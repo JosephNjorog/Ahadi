@@ -3,7 +3,7 @@ import { and, eq, gt, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { AppError } from "@ahadi/core";
 import { getEnv } from "@ahadi/core/env";
-import { authTokens, getDb, users, type User } from "@ahadi/db";
+import { authTokens, getDb, passports, users, type User } from "@ahadi/db";
 import { sendEmail } from "./email";
 import { log } from "./log";
 
@@ -88,6 +88,17 @@ const ProfileSchema = z.object({
   displayName: z.string().trim().min(1).max(80),
   paypalEmail: z.union([EmailSchema, z.literal("")]).transform((v) => v || null),
   country: z.union([z.string().trim().length(2).toUpperCase(), z.literal("")]).transform((v) => v || null),
+  phoneE164: z
+    .union([
+      z
+        .string()
+        .trim()
+        .regex(/^\+[1-9]\d{7,14}$/, "Use international format, e.g. +254712345678"),
+      z.literal(""),
+    ])
+    .optional()
+    .transform((v) => (v === undefined ? undefined : v || null)),
+  showExactEarnings: z.boolean().optional(),
 });
 
 export async function updateProfile(userId: string, input: unknown): Promise<User> {
@@ -98,7 +109,20 @@ export async function updateProfile(userId: string, input: unknown): Promise<Use
       "Check the highlighted fields",
       parsed.error.flatten().fieldErrors,
     );
-  const [u] = await getDb().update(users).set(parsed.data).where(eq(users.id, userId)).returning();
+  const { showExactEarnings, ...profile } = parsed.data;
+  if (profile.phoneE164) {
+    const [taken] = await getDb()
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.phoneE164, profile.phoneE164));
+    if (taken && taken.id !== userId)
+      throw new AppError("VALIDATION_FAILED", "That phone number is linked to another account", {
+        phoneE164: ["Already in use"],
+      });
+  }
+  const [u] = await getDb().update(users).set(profile).where(eq(users.id, userId)).returning();
   if (!u) throw new AppError("NOT_FOUND", "User not found");
+  if (showExactEarnings !== undefined)
+    await getDb().update(passports).set({ showExactEarnings }).where(eq(passports.userId, userId));
   return u;
 }

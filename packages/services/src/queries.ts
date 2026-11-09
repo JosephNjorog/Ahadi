@@ -246,3 +246,47 @@ export async function getAdminOverview() {
     deadJobs,
   };
 }
+
+/** Admin review queue: milestones waiting for a human (SPEC §20 Admin). */
+export async function listReviewQueue() {
+  return getDb()
+    .select({
+      milestoneId: milestones.id,
+      title: milestones.title,
+      state: milestones.state,
+      amountMinor: milestones.amountMinor,
+      promiseId: promises.id,
+      promiseTitle: promises.title,
+      currency: promises.currency,
+    })
+    .from(milestones)
+    .innerJoin(promises, eq(promises.id, milestones.promiseId))
+    .where(inArray(milestones.state, ["NEEDS_HUMAN", "MEDIATING", "SETTLEMENT_FAILED", "ESCALATED"]))
+    .orderBy(desc(promises.updatedAt))
+    .limit(100);
+}
+
+/** Flat rows for the AG Grid admin ledger (promises × milestones × money). */
+export async function adminGridRows() {
+  const rows = await getDb().execute<Record<string, unknown>>(sql`
+    select p.id as promise_id, p.title as promise, p.category, p.state as promise_state, p.currency,
+      m.id as milestone_id, m.position, m.title as milestone, m.state as milestone_state, m.amount_minor,
+      cu.display_name as client, wu.display_name as worker,
+      f.status as funding_status, f.paypal_order_id, f.paypal_authorization_id, f.expires_at,
+      pr.release_bps, pr.capture_minor,
+      s.status as settlement_status, s.paypal_capture_id, s.captured_minor, s.paypal_fee_minor,
+      (select coalesce(sum(po.amount_minor),0) from payouts po where po.settlement_id = s.id and po.status = 'SUCCESS') as paid_out_minor,
+      p.created_at, p.updated_at
+    from promises p
+    left join milestones m on m.promise_id = p.id
+    left join users cu on cu.id = p.client_user_id
+    left join users wu on wu.id = p.worker_user_id
+    left join lateral (select * from fundings f where f.milestone_id = m.id order by f.attempt desc limit 1) f on true
+    left join lateral (
+      select pr.* from proposals pr join verifications v on v.id = pr.verification_id join submissions sb on sb.id = v.submission_id
+      where sb.milestone_id = m.id and pr.superseded_at is null order by pr.created_at desc limit 1) pr on true
+    left join settlements s on s.proposal_id = pr.id
+    order by p.updated_at desc
+    limit 2000`);
+  return rows.rows;
+}
