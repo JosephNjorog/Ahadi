@@ -22,6 +22,12 @@
     "pino": "^10.1.0",
     "zod": "^4.1.12",
     "@ahadi/agents": "*",
-    "@ahadi/verifiers": "*"
+    "@ahadi/verifiers": "*",
+    "pdfkit": "^0.17.2",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/pdfkit": "^0.17.3",
+    "@types/qrcode": "^1.5.5"
   }
 }
